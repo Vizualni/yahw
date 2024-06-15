@@ -61,7 +61,7 @@ func main() {
 			),
 		)
 
-		root.Render(w)
+		root.TagRender(w)
 	})
 
 	if err := http.ListenAndServe("127.0.0.1:8585", nil); err != nil {

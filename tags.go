@@ -154,7 +154,7 @@ type HTML5Doctype struct {
 }
 
 func (HTML5Doctype) tag() {}
-func (t HTML5Doctype) Render(w io.Writer) error {
+func (t HTML5Doctype) TagRender(w io.Writer) error {
 	_, err := w.Write([]byte("<!DOCTYPE html>"))
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (t HTML5Doctype) clone() HTML5Doctype {
 
 // All known HTML5 tags
 
-func NewHTML5Doctype() HTML5Doctype { return HTML5Doctype{} }
+func NewHTML5Doctype(cs ...TagRenderer) HTML5Doctype { return HTML5Doctype{children: cs} }
 
 func A(attrs ...AttrRenderer) Tag                 { return TagBuilder("a")(attrs...) }
 func Abbr(attrs ...AttrRenderer) Tag              { return TagBuilder("abbr")(attrs...) }
