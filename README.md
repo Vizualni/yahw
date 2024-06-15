@@ -77,3 +77,8 @@ func main() {
 }
 
 ```
+
+
+## Why?
+
+It's a common pattern I am using in my pet projects. I thought I might share it as it could be useful for others.
