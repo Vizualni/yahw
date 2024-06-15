@@ -7,9 +7,10 @@ import (
 func TestCreatingTags(t *testing.T) {
 	foo := TagBuilder("foo")
 	bar := TagBuilder("bar")
+	single := SelfClosingTagBuilder("single")
 	tt := []struct {
 		Name string
-		Tag  Tag
+		Tag  TagRenderer
 		Exp  string
 	}{
 		{Name: "Simple foo tag", Tag: foo(), Exp: "<foo></foo>"},
@@ -26,6 +27,8 @@ func TestCreatingTags(t *testing.T) {
 			Attr("key3", "value3"),
 			Attr("key4", "value4"),
 		)), Exp: "<foo key1=\"value1\" key2=\"value2\"><bar key3=\"value3\" key4=\"value4\"></bar></foo>"},
+		{Name: "Self-closing tag", Tag: single(), Exp: "<single />"},
+		{Name: "Self-closing tag with attrs", Tag: single(Attr("key", "value")), Exp: "<single key=\"value\" />"},
 	}
 
 	for _, tc := range tt {

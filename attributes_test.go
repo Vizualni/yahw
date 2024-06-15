@@ -5,9 +5,17 @@ import (
 	"testing"
 )
 
-func assertEqual(t *testing.T, r Renderable, expected string) {
+func assertEqual(t *testing.T, r any, expected string) {
 	strbuf := &strings.Builder{}
-	err := r.Render(strbuf)
+	var err error
+	switch r := r.(type) {
+	case TagRenderer:
+		err = r.TagRender(strbuf)
+	case AttrRenderer:
+		err = r.AttrRender(strbuf)
+	default:
+		t.Errorf("Unknown type: %T", r)
+	}
 	if err != nil {
 		t.Errorf("Error rendering: %s", err)
 	}
@@ -81,6 +89,27 @@ func TestCreatingInvalidAttrs(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.Name, func(t *testing.T) {
 			assertPanic(t, func() { Attr(tc.AttrName, tc.AttrVal) })
+		})
+	}
+}
+
+func TestClassNames(t *testing.T) {
+	tt := []struct {
+		Name    string
+		Classes string
+		Expect  string
+	}{
+		{Name: "Single", Classes: "foo", Expect: `class="foo"`},
+		{Name: "Multiple", Classes: "foo bar", Expect: `class="foo bar"`},
+		{Name: "Empty", Classes: "", Expect: `class=""`},
+		{Name: "Duplicate", Classes: "foo foo", Expect: `class="foo"`},
+		{Name: "Duplicate with space", Classes: "foo  foo", Expect: `class="foo"`},
+		{Name: "Duplicate with other classes", Classes: "foo bar foo", Expect: `class="foo bar"`},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.Name, func(t *testing.T) {
+			assertEqual(t, Classes(tc.Classes), tc.Expect)
 		})
 	}
 }

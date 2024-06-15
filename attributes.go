@@ -44,12 +44,60 @@ type Attribute struct {
 	value string
 }
 
-func (a Attribute) attr() {}
-
-func (a Attribute) Render(w io.Writer) error {
+func (a Attribute) AttrRender(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	escapedValue := html.EscapeString(a.value)
 	_, err := w.Write([]byte(escapedKey + `="` + escapedValue + `"`))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type Attrs []AttrRenderer
+
+func (a Attrs) AttrRender(w io.Writer) error {
+	for i, attr := range a {
+		if i > 0 {
+			_, err := w.Write([]byte(" "))
+			if err != nil {
+				return err
+			}
+		}
+		err := attr.AttrRender(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type Classes string
+
+func (c Classes) AttrRender(w io.Writer) error {
+	clss := strings.Split(string(c), " ")
+	res := make([]string, 0, len(clss))
+	for _, cls := range clss {
+		cls = strings.TrimSpace(cls)
+		if cls == "" {
+			continue
+		}
+
+		// Check for duplicates.
+		// Not the most efficient way, but it's good enough for now.
+		found := false
+		for _, existing := range res {
+			if existing == cls {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+		res = append(res, cls)
+	}
+	_, err := w.Write([]byte(`class="` + strings.Join(res, " ") + `"`))
 	if err != nil {
 		return err
 	}

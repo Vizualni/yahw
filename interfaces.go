@@ -4,15 +4,10 @@ import (
 	"io"
 )
 
-type Renderable interface {
-	Render(w io.Writer) error
+type TagRenderer interface {
+	TagRender(w io.Writer) error
 }
 
-type tagger interface {
-	Renderable
-	tag()
-}
-type attrer interface {
-	Renderable
-	attr()
+type AttrRenderer interface {
+	AttrRender(w io.Writer) error
 }
