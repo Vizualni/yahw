@@ -78,6 +78,8 @@ func main() {
 
 ```
 
+Run `go run ./example` and visit http://localhost:8585/
+
 
 ## Why?
 
