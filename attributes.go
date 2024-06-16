@@ -185,8 +185,8 @@ func Min(min string) Attribute                       { return Attr("min", min) }
 func Multiple(multiple string) Attribute             { return Attr("multiple", multiple) }
 func Pattern(pattern string) Attribute               { return Attr("pattern", pattern) }
 func Placeholder(placeholder string) Attribute       { return Attr("placeholder", placeholder) }
-func ReadOnly(readOnly string) Attribute             { return Attr("readonly", readOnly) }
-func Required(required string) Attribute             { return Attr("required", required) }
+func ReadOnly() NoValAttribute                       { return NoValAttr("readonly") }
+func Required() NoValAttribute                       { return NoValAttr("required") }
 func Size(size string) Attribute                     { return Attr("size", size) }
 func Src(src string) Attribute                       { return Attr("src", src) }
 func Step(step string) Attribute                     { return Attr("step", step) }
