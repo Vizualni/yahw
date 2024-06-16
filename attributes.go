@@ -224,7 +224,7 @@ func ColSpan(colSpan string) Attribute               { return Attr("colspan", co
 func RowSpan(rowSpan string) Attribute               { return Attr("rowspan", rowSpan) }
 func Action(action string) Attribute                 { return Attr("action", action) }
 func Method(method string) Attribute                 { return Attr("method", method) }
-func NoValidate(noValidate string) Attribute         { return Attr("novalidate", noValidate) }
+func NoValidate() NoValAttribute                     { return NoValAttr("novalidate") }
 
 // Additional common attributes
 func TitleAttr(title string) Attribute             { return Attr("title", title) }
