@@ -174,6 +174,7 @@ func Role(role string) Attribute                     { return Attr("role", role)
 func AutoFocus(autoFocus string) Attribute           { return Attr("autofocus", autoFocus) }
 func AutoComplete(autoComplete string) Attribute     { return Attr("autocomplete", autoComplete) }
 func AutoSave(autoSave string) Attribute             { return Attr("autosave", autoSave) }
+func FormAttr(form string) Attribute                 { return Attr("form", form) }
 func FormAction(formAction string) Attribute         { return Attr("formaction", formAction) }
 func FormEncType(formEncType string) Attribute       { return Attr("formenctype", formEncType) }
 func FormMethod(formMethod string) Attribute         { return Attr("formmethod", formMethod) }
