@@ -54,15 +54,18 @@ func (a Attribute) AttrRender(w io.Writer) error {
 	return nil
 }
 
-type Attrs []AttrRenderer
+type AttrSlice []AttrRenderer
 
-func (a Attrs) AttrRender(w io.Writer) error {
+func (a AttrSlice) AttrRender(w io.Writer) error {
 	for i, attr := range a {
 		if i > 0 {
 			_, err := w.Write([]byte(" "))
 			if err != nil {
 				return err
 			}
+		}
+		if attr == nil {
+			continue
 		}
 		err := attr.AttrRender(w)
 		if err != nil {

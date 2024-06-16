@@ -61,6 +61,9 @@ func (t SelfClosingTag) TagRender(w io.Writer) error {
 	}
 
 	for idx, attr := range t.attrs {
+		if attr == nil {
+			continue
+		}
 		err = attr.AttrRender(w)
 		if err != nil {
 			return err
@@ -119,6 +122,9 @@ func (t Tag) TagRender(w io.Writer) error {
 	}
 
 	for idx, attr := range t.attrs {
+		if attr == nil {
+			continue
+		}
 		err = attr.AttrRender(w)
 		if err != nil {
 			return err
@@ -135,6 +141,9 @@ func (t Tag) TagRender(w io.Writer) error {
 	}
 
 	for _, child := range t.children {
+		if child == nil {
+			continue
+		}
 		err = child.TagRender(w)
 		if err != nil {
 			return err
@@ -150,7 +159,7 @@ func (t Tag) TagRender(w io.Writer) error {
 }
 
 type HTML5Doctype struct {
-	children []TagRenderer
+	children TagSlice
 }
 
 func (HTML5Doctype) tag() {}
@@ -159,13 +168,7 @@ func (t HTML5Doctype) TagRender(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	for _, child := range t.children {
-		err = child.TagRender(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return t.children.TagRender(w)
 }
 
 func (t HTML5Doctype) X(children ...TagRenderer) HTML5Doctype {
@@ -181,6 +184,21 @@ func (t HTML5Doctype) clone() HTML5Doctype {
 	return HTML5Doctype{
 		children: children,
 	}
+}
+
+type TagSlice []TagRenderer
+
+func (t TagSlice) TagRender(w io.Writer) error {
+	for _, tag := range t {
+		if tag == nil {
+			continue
+		}
+		err := tag.TagRender(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // All known HTML5 tags

@@ -35,7 +35,7 @@ func MyCustomInput(name, placeholder string) TagRenderer {
 }
 
 func MyCommonAttributes(link string) AttrRenderer {
-	return Attrs{Attr("id", "my-id"), Classes("my-1 my-2 my-1"), Attr("href", link)}
+	return AttrSlice{Attr("id", "my-id"), Classes("my-1 my-2 my-1"), Attr("href", link)}
 }
 
 func main() {
