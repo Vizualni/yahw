@@ -33,6 +33,15 @@ func Attr(key, value string) Attribute {
 	}
 }
 
+func NoValAttr(key string) NoValAttribute {
+	if !isValidAttrName(key) {
+		panic("Invalid attribute name: " + key)
+	}
+	return NoValAttribute{
+		key: key,
+	}
+}
+
 func AttrBuilder(key string) func(string) Attribute {
 	return func(value string) Attribute {
 		return Attr(key, value)
@@ -48,6 +57,19 @@ func (a Attribute) AttrRender(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	escapedValue := html.EscapeString(a.value)
 	_, err := w.Write([]byte(escapedKey + `="` + escapedValue + `"`))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type NoValAttribute struct {
+	key string
+}
+
+func (a NoValAttribute) AttrRender(w io.Writer) error {
+	escapedKey := html.EscapeString(a.key)
+	_, err := w.Write([]byte(escapedKey))
 	if err != nil {
 		return err
 	}
@@ -209,8 +231,8 @@ func TitleAttr(title string) Attribute             { return Attr("title", title)
 func StyleAttr(style string) Attribute             { return Attr("style", style) }
 func DataAttr(name string, value string) Attribute { return Attr("data-"+name, value) }
 func Aria(name string, value string) Attribute     { return Attr("aria-"+name, value) }
-func Disabled(disabled string) Attribute           { return Attr("disabled", disabled) }
-func Checked(checked string) Attribute             { return Attr("checked", checked) }
+func Disabled() NoValAttribute                     { return NoValAttr("disabled") }
+func Checked() NoValAttribute                      { return NoValAttr("checked") }
 func Value(value string) Attribute                 { return Attr("value", value) }
 func MaxLength(maxLength string) Attribute         { return Attr("maxlength", maxLength) }
 func MinLength(minLength string) Attribute         { return Attr("minlength", minLength) }
