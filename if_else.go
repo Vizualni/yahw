@@ -19,7 +19,13 @@ func (ie IfElseTag) Else(els TagRenderer) IfElseTag {
 
 func (t IfElseTag) TagRender(w io.Writer) error {
 	if t.cond {
+		if t.then == nil {
+			return nil
+		}
 		return t.then.TagRender(w)
+	}
+	if t.els == nil {
+		return nil
 	}
 	return t.els.TagRender(w)
 }
@@ -41,7 +47,13 @@ func (ie IfElseAttr) Else(els AttrRenderer) IfElseAttr {
 
 func (t IfElseAttr) AttrRender(w io.Writer) error {
 	if t.cond {
+		if t.then == nil {
+			return nil
+		}
 		return t.then.AttrRender(w)
+	}
+	if t.els == nil {
+		return nil
 	}
 	return t.els.AttrRender(w)
 }
