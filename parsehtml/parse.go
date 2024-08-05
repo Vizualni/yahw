@@ -31,6 +31,7 @@ func GenerateGo(in io.Reader) string {
 	}
 	buf.WriteString("}")
 	code := buf.String()
+	fmt.Println(code)
 	bz, err := format.Source([]byte(code))
 	if err != nil {
 		panic(err)
@@ -61,7 +62,9 @@ func writeNode(w io.Writer, node *html.Node) {
 			writeNode(w, next)
 			w.Write([]byte(",\n"))
 		case html.TextNode:
-			fmt.Fprintf(w, `yahw.Text("%s"),`, next.Data)
+			if len(strings.TrimSpace(next.Data)) > 0 {
+				fmt.Fprintf(w, "yahw.Text(`%s`),", next.Data)
+			}
 		}
 	}
 	w.Write([]byte("\n)"))
@@ -77,7 +80,7 @@ func writeAttrs(w io.Writer, node *html.Node) {
 	}
 
 	for _, attr := range node.Attr {
-		code := fmt.Sprintf(`yahw.Attr("%s", "%s"),`, attr.Key, attr.Val)
+		code := fmt.Sprintf("yahw.Attr(\"%s\", `%s`),", attr.Key, attr.Val)
 		w.Write([]byte(code))
 		w.Write([]byte("\n"))
 	}
