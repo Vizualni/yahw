@@ -20,6 +20,12 @@ func isValidTagName(tagName string) bool {
 	return true
 }
 
+func NewTag(tagName string) Tag {
+	return Tag{
+		tagName: tagName,
+	}
+}
+
 func TagBuilder(tagName string) func(...AttrRenderer) Tag {
 	if !isValidTagName(tagName) {
 		panic("Invalid tag name: " + tagName)
@@ -31,6 +37,12 @@ func TagBuilder(tagName string) func(...AttrRenderer) Tag {
 			attrs:   attrs,
 		}
 	}
+}
+
+func (t Tag) Attrs(attrs ...AttrRenderer) Tag {
+	clone := t.clone()
+	clone.attrs = append(clone.attrs, attrs...)
+	return clone
 }
 
 func SelfClosingTagBuilder(tagName string) func(...AttrRenderer) SelfClosingTag {
