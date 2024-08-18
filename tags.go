@@ -13,6 +13,7 @@ func isValidTagName(tagName string) bool {
 		case '0' <= c && c <= '9':
 		case 'a' <= c && c <= 'z':
 		case 'A' <= c && c <= 'Z':
+		case c == '-' || c == '_':
 		default:
 			return false
 		}

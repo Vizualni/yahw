@@ -3,6 +3,7 @@ package yahw
 import (
 	"html"
 	"io"
+	"maps"
 	"strings"
 )
 
@@ -97,10 +98,8 @@ func (a AttrSlice) AttrRender(w io.Writer) error {
 	return nil
 }
 
-type Classes string
-
-func (c Classes) AttrRender(w io.Writer) error {
-	clss := strings.Split(string(c), " ")
+func extractClasses(cls string) []string {
+	clss := strings.Split(string(cls), " ")
 	res := make([]string, 0, len(clss))
 	for _, cls := range clss {
 		cls = strings.TrimSpace(cls)
@@ -122,11 +121,57 @@ func (c Classes) AttrRender(w io.Writer) error {
 		}
 		res = append(res, cls)
 	}
+
+	return res
+}
+
+type Classes string
+
+func (c Classes) AttrRender(w io.Writer) error {
+	res := extractClasses(string(c))
 	_, err := w.Write([]byte(`class="` + strings.Join(res, " ") + `"`))
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c Classes) Add(s string) Classes {
+	return c + Classes(" ") + Classes(s)
+}
+
+type ClassesMap map[string]bool
+
+func (c ClassesMap) AttrRender(w io.Writer) error {
+	var sb strings.Builder
+	cnt := len(c)
+	ind := -1
+	for k, v := range c {
+		ind++
+		if !v {
+			continue
+		}
+		sb.WriteString(k)
+		if ind < cnt-1 {
+			sb.WriteString(" ")
+		}
+
+	}
+	_, err := w.Write([]byte(`class="` + sb.String() + `"`))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c ClassesMap) Add(s string) ClassesMap {
+	res := extractClasses(s)
+
+	newMap := maps.Clone(c)
+	for _, cls := range res {
+		newMap[cls] = true
+	}
+	return newMap
 }
 
 // All common attributes
