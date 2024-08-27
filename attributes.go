@@ -3,6 +3,7 @@ package yahw
 import (
 	"html"
 	"io"
+	"log/slog"
 	"maps"
 	"strings"
 )
@@ -193,6 +194,17 @@ func (c ClassesMap) Add(s string) ClassesMap {
 		newMap[cls] = true
 	}
 	return newMap
+}
+
+func AttachAttrs(t TagRenderer, attrs ...AttrRenderer) TagRenderer {
+	tv, ok := t.(Tag)
+	if !ok {
+		slog.Warn("unable to attach attrs", slog.Any("tag", t))
+		return t
+	}
+	clone := tv.clone()
+	clone.attrs = append(clone.attrs, attrs...)
+	return clone
 }
 
 // All common attributes

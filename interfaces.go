@@ -4,6 +4,10 @@ import (
 	"io"
 )
 
+type AddAttributter interface {
+	AddAttributes(...AttrRenderer) TagRenderer
+}
+
 type TagRenderer interface {
 	TagRender(w io.Writer) error
 }

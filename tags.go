@@ -143,9 +143,6 @@ type Tag struct {
 	children []TagRenderer
 }
 
-func (t Tag) tag()      {}
-func (t Tag) yahwNode() {}
-
 func (t Tag) X(children ...TagRenderer) Tag {
 	clone := t.clone()
 	clone.children = append(clone.children, children...)
