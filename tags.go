@@ -63,6 +63,24 @@ type SelfClosingTag struct {
 	attrs   []AttrRenderer
 }
 
+func mergeClasses(clss AttrSlice) Classes {
+	merged := Classes("")
+	for _, c := range clss {
+		switch t := c.(type) {
+		case Classes:
+			merged = merged.Merge(t)
+		case ClassesMap:
+			merged = merged.MergeMap(t)
+		case Attribute:
+			merged = merged.Add(t.value)
+		default:
+			panic("can only merge attributes with class")
+		}
+	}
+
+	return merged
+}
+
 func (t SelfClosingTag) TagRender(w io.Writer) error {
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
@@ -73,7 +91,31 @@ func (t SelfClosingTag) TagRender(w io.Writer) error {
 		w.Write([]byte(" "))
 	}
 
-	for idx, attr := range t.attrs {
+	newAttrs := AttrSlice{}
+	toMerge := map[string]AttrSlice{}
+	for _, attr := range t.attrs {
+		switch t := attr.(type) {
+		case Classes, ClassesMap:
+			toMerge["class"] = append(toMerge["class"], t)
+		case Attribute:
+			if t.key == "class" {
+				toMerge["class"] = append(toMerge["class"], t)
+			} else {
+				newAttrs = append(newAttrs, t)
+			}
+		default:
+			newAttrs = append(newAttrs, t)
+		}
+	}
+
+	for k, attrs := range toMerge {
+		switch k {
+		case "class":
+			newAttrs = append(newAttrs, mergeClasses(attrs))
+		}
+	}
+
+	for idx, attr := range newAttrs {
 		if attr == nil {
 			continue
 		}

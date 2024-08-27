@@ -140,9 +140,17 @@ func (c Classes) Add(s string) Classes {
 	return c + Classes(" ") + Classes(s)
 }
 
+func (c Classes) Merge(oth Classes) Classes {
+	return c.Add(string(oth))
+}
+
+func (c Classes) MergeMap(m ClassesMap) Classes {
+	return c.Add(m.extract())
+}
+
 type ClassesMap map[string]bool
 
-func (c ClassesMap) AttrRender(w io.Writer) error {
+func (c ClassesMap) extract() string {
 	var sb strings.Builder
 	cnt := len(c)
 	ind := -1
@@ -157,7 +165,12 @@ func (c ClassesMap) AttrRender(w io.Writer) error {
 		}
 
 	}
-	_, err := w.Write([]byte(`class="` + sb.String() + `"`))
+	return sb.String()
+}
+
+func (c ClassesMap) AttrRender(w io.Writer) error {
+	s := c.extract()
+	_, err := w.Write([]byte(`class="` + s + `"`))
 	if err != nil {
 		return err
 	}
