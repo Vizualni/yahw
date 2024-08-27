@@ -98,6 +98,14 @@ func (a AttrSlice) AttrRender(w io.Writer) error {
 	return nil
 }
 
+func (a AttrSlice) Add(i AttrRenderer) AttrSlice {
+	return append(a[:], i)
+}
+
+func (a AttrSlice) Merge(mrg AttrSlice) AttrSlice {
+	return append(a[:], mrg...)
+}
+
 func extractClasses(cls string) []string {
 	clss := strings.Split(string(cls), " ")
 	res := make([]string, 0, len(clss))
