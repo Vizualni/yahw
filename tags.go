@@ -172,8 +172,31 @@ func (t Tag) TagRender(w io.Writer) error {
 	if len(t.attrs) > 0 {
 		w.Write([]byte(" "))
 	}
+	newAttrs := AttrSlice{}
+	toMerge := map[string]AttrSlice{}
+	for _, attr := range t.attrs {
+		switch t := attr.(type) {
+		case Classes, ClassesMap:
+			toMerge["class"] = append(toMerge["class"], t)
+		case Attribute:
+			if t.key == "class" {
+				toMerge["class"] = append(toMerge["class"], t)
+			} else {
+				newAttrs = append(newAttrs, t)
+			}
+		default:
+			newAttrs = append(newAttrs, t)
+		}
+	}
 
-	for idx, attr := range t.attrs {
+	for k, attrs := range toMerge {
+		switch k {
+		case "class":
+			newAttrs = append(newAttrs, mergeClasses(attrs))
+		}
+	}
+
+	for idx, attr := range newAttrs {
 		if attr == nil {
 			continue
 		}
