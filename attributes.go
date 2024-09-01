@@ -154,7 +154,16 @@ func (c Classes) Merge(oth Classes) Classes {
 }
 
 func (c Classes) MergeMap(m ClassesMap) Classes {
-	return c.Add(m.extract())
+	cmap := ClassesMap{}
+	for _, cls := range extractClasses(string(c)) {
+		cmap[cls] = true
+	}
+
+	for cls, ok := range m {
+		cmap[cls] = ok
+	}
+
+	return Classes(cmap.extract())
 }
 
 type ClassesMap map[string]bool
