@@ -4,7 +4,9 @@ import "io"
 
 type Text string
 
-func (t Text) TagRender(w io.Writer) error {
+func (t Text) Tag() Renderable { return t }
+
+func (t Text) Render(w io.Writer) error {
 	_, err := w.Write([]byte(t))
 	return err
 }

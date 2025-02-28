@@ -12,23 +12,25 @@ type MyCustomButton struct {
 	BackgroundColor string
 }
 
-func (m MyCustomButton) TagRender(w io.Writer) error {
+func (m MyCustomButton) Tag() Renderable { return m }
+
+func (m MyCustomButton) Render(w io.Writer) error {
 	return Button(
-		Attr("style", "background-color: "+m.BackgroundColor),
+		BuildAttr("style", "background-color: "+m.BackgroundColor),
 	).X(
 		Text(m.Text),
-	).TagRender(w)
+	).Render(w)
 }
 
-func MyCustomInput(name, placeholder string) TagRenderer {
+func MyCustomInput(name, placeholder string) Tag {
 	return Input(
-		Attr("name", name),
-		Attr("placeholder", placeholder),
+		BuildAttr("name", name),
+		BuildAttr("placeholder", placeholder),
 	)
 }
 
-func MyCommonAttributes(link string) AttrRenderer {
-	return AttrSlice{Attr("id", "my-id"), Classes("my-1 my-2 my-1"), Attr("href", link)}
+func MyCommonAttributes(link string) Attr {
+	return AttrSlice{BuildAttr("id", "my-id"), Classes("my-1 my-2 my-1"), BuildAttr("href", link)}
 }
 
 func main() {
@@ -61,7 +63,7 @@ func main() {
 			),
 		)
 
-		root.TagRender(w)
+		root.Render(w)
 	})
 
 	if err := http.ListenAndServe("127.0.0.1:8585", nil); err != nil {

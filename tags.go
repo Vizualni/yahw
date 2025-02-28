@@ -21,36 +21,36 @@ func isValidTagName(tagName string) bool {
 	return true
 }
 
-func NewTag(tagName string) Tag {
-	return Tag{
+func NewTag(tagName string) CommonTag {
+	return CommonTag{
 		tagName: tagName,
 	}
 }
 
-func TagBuilder(tagName string) func(...AttrRenderer) Tag {
+func TagBuilder(tagName string) func(...Attr) CommonTag {
 	if !isValidTagName(tagName) {
 		panic("Invalid tag name: " + tagName)
 	}
 
-	return func(attrs ...AttrRenderer) Tag {
-		return Tag{
+	return func(attrs ...Attr) CommonTag {
+		return CommonTag{
 			tagName: tagName,
 			attrs:   attrs,
 		}
 	}
 }
 
-func (t Tag) Attrs(attrs ...AttrRenderer) Tag {
+func (t CommonTag) Attrs(attrs ...Attr) CommonTag {
 	clone := t.clone()
 	clone.attrs = append(clone.attrs, attrs...)
 	return clone
 }
 
-func SelfClosingTagBuilder(tagName string) func(...AttrRenderer) SelfClosingTag {
+func SelfClosingTagBuilder(tagName string) func(...Attr) SelfClosingTag {
 	if !isValidTagName(tagName) {
 		panic("Invalid self closing tag name: " + tagName)
 	}
-	return func(attrs ...AttrRenderer) SelfClosingTag {
+	return func(attrs ...Attr) SelfClosingTag {
 		return SelfClosingTag{
 			tagName: tagName,
 			attrs:   attrs,
@@ -60,8 +60,10 @@ func SelfClosingTagBuilder(tagName string) func(...AttrRenderer) SelfClosingTag 
 
 type SelfClosingTag struct {
 	tagName string
-	attrs   []AttrRenderer
+	attrs   []Attr
 }
+
+func (t SelfClosingTag) Tag() Renderable { return t }
 
 func mergeClasses(clss AttrSlice) Classes {
 	merged := Classes("")
@@ -81,7 +83,7 @@ func mergeClasses(clss AttrSlice) Classes {
 	return merged
 }
 
-func (t SelfClosingTag) TagRender(w io.Writer) error {
+func (t SelfClosingTag) Render(w io.Writer) error {
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
 		return err
@@ -119,7 +121,7 @@ func (t SelfClosingTag) TagRender(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err = attr.AttrRender(w)
+		err = attr.Attr().Render(w)
 		if err != nil {
 			return err
 		}
@@ -137,33 +139,35 @@ func (t SelfClosingTag) TagRender(w io.Writer) error {
 	return nil
 }
 
-type Tag struct {
+type CommonTag struct {
 	tagName  string
-	attrs    []AttrRenderer
-	children []TagRenderer
+	attrs    []Attr
+	children []Tag
 }
 
-func (t Tag) X(children ...TagRenderer) Tag {
+func (t CommonTag) Tag() Renderable { return t }
+
+func (t CommonTag) X(children ...Tag) CommonTag {
 	clone := t.clone()
 	clone.children = append(clone.children, children...)
 	return clone
 }
 
-func (t Tag) clone() Tag {
-	attrs := make([]AttrRenderer, len(t.attrs))
+func (t CommonTag) clone() CommonTag {
+	attrs := make([]Attr, len(t.attrs))
 	copy(attrs, t.attrs)
 
-	children := make([]TagRenderer, len(t.children))
+	children := make([]Tag, len(t.children))
 	copy(children, t.children)
 
-	return Tag{
+	return CommonTag{
 		tagName:  t.tagName,
 		attrs:    attrs,
 		children: children,
 	}
 }
 
-func (t Tag) TagRender(w io.Writer) error {
+func (t CommonTag) Render(w io.Writer) error {
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
 		return err
@@ -200,7 +204,7 @@ func (t Tag) TagRender(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err = attr.AttrRender(w)
+		err = attr.Attr().Render(w)
 		if err != nil {
 			return err
 		}
@@ -219,7 +223,7 @@ func (t Tag) TagRender(w io.Writer) error {
 		if child == nil {
 			continue
 		}
-		err = child.TagRender(w)
+		err = child.Tag().Render(w)
 		if err != nil {
 			return err
 		}
@@ -237,23 +241,24 @@ type HTML5Doctype struct {
 	children TagSlice
 }
 
-func (HTML5Doctype) tag() {}
-func (t HTML5Doctype) TagRender(w io.Writer) error {
+func (t HTML5Doctype) Tag() Renderable { return t }
+
+func (t HTML5Doctype) Render(w io.Writer) error {
 	_, err := w.Write([]byte("<!DOCTYPE html>"))
 	if err != nil {
 		return err
 	}
-	return t.children.TagRender(w)
+	return t.children.Render(w)
 }
 
-func (t HTML5Doctype) X(children ...TagRenderer) HTML5Doctype {
+func (t HTML5Doctype) X(children ...Renderable) HTML5Doctype {
 	clone := t.clone()
 	clone.children = append(clone.children, children...)
 	return clone
 }
 
 func (t HTML5Doctype) clone() HTML5Doctype {
-	children := make([]TagRenderer, len(t.children))
+	children := make([]Renderable, len(t.children))
 	copy(children, t.children)
 
 	return HTML5Doctype{
@@ -261,14 +266,14 @@ func (t HTML5Doctype) clone() HTML5Doctype {
 	}
 }
 
-type TagSlice []TagRenderer
+type TagSlice []Renderable
 
-func (t TagSlice) TagRender(w io.Writer) error {
+func (t TagSlice) Render(w io.Writer) error {
 	for _, tag := range t {
 		if tag == nil {
 			continue
 		}
-		err := tag.TagRender(w)
+		err := tag.Render(w)
 		if err != nil {
 			return err
 		}
@@ -278,115 +283,115 @@ func (t TagSlice) TagRender(w io.Writer) error {
 
 // All known HTML5 tags
 
-func NewHTML5Doctype(cs ...TagRenderer) HTML5Doctype { return HTML5Doctype{children: cs} }
+func NewHTML5Doctype(cs ...Renderable) HTML5Doctype { return HTML5Doctype{children: cs} }
 
-func A(attrs ...AttrRenderer) Tag                 { return TagBuilder("a")(attrs...) }
-func Abbr(attrs ...AttrRenderer) Tag              { return TagBuilder("abbr")(attrs...) }
-func Address(attrs ...AttrRenderer) Tag           { return TagBuilder("address")(attrs...) }
-func Area(attrs ...AttrRenderer) SelfClosingTag   { return SelfClosingTagBuilder("area")(attrs...) }
-func Article(attrs ...AttrRenderer) Tag           { return TagBuilder("article")(attrs...) }
-func Aside(attrs ...AttrRenderer) Tag             { return TagBuilder("aside")(attrs...) }
-func Audio(attrs ...AttrRenderer) Tag             { return TagBuilder("audio")(attrs...) }
-func B(attrs ...AttrRenderer) Tag                 { return TagBuilder("b")(attrs...) }
-func Base(attrs ...AttrRenderer) SelfClosingTag   { return SelfClosingTagBuilder("base")(attrs...) }
-func Bdi(attrs ...AttrRenderer) Tag               { return TagBuilder("bdi")(attrs...) }
-func Bdo(attrs ...AttrRenderer) Tag               { return TagBuilder("bdo")(attrs...) }
-func Blockquote(attrs ...AttrRenderer) Tag        { return TagBuilder("blockquote")(attrs...) }
-func Body(attrs ...AttrRenderer) Tag              { return TagBuilder("body")(attrs...) }
-func Br(attrs ...AttrRenderer) SelfClosingTag     { return SelfClosingTagBuilder("br")(attrs...) }
-func Button(attrs ...AttrRenderer) Tag            { return TagBuilder("button")(attrs...) }
-func Canvas(attrs ...AttrRenderer) Tag            { return TagBuilder("canvas")(attrs...) }
-func Caption(attrs ...AttrRenderer) Tag           { return TagBuilder("caption")(attrs...) }
-func Cite(attrs ...AttrRenderer) Tag              { return TagBuilder("cite")(attrs...) }
-func Code(attrs ...AttrRenderer) Tag              { return TagBuilder("code")(attrs...) }
-func Col(attrs ...AttrRenderer) SelfClosingTag    { return SelfClosingTagBuilder("col")(attrs...) }
-func Colgroup(attrs ...AttrRenderer) Tag          { return TagBuilder("colgroup")(attrs...) }
-func Data(attrs ...AttrRenderer) Tag              { return TagBuilder("data")(attrs...) }
-func Datalist(attrs ...AttrRenderer) Tag          { return TagBuilder("datalist")(attrs...) }
-func Dd(attrs ...AttrRenderer) Tag                { return TagBuilder("dd")(attrs...) }
-func Del(attrs ...AttrRenderer) Tag               { return TagBuilder("del")(attrs...) }
-func Details(attrs ...AttrRenderer) Tag           { return TagBuilder("details")(attrs...) }
-func Dfn(attrs ...AttrRenderer) Tag               { return TagBuilder("dfn")(attrs...) }
-func Dialog(attrs ...AttrRenderer) Tag            { return TagBuilder("dialog")(attrs...) }
-func Div(attrs ...AttrRenderer) Tag               { return TagBuilder("div")(attrs...) }
-func Dl(attrs ...AttrRenderer) Tag                { return TagBuilder("dl")(attrs...) }
-func Dt(attrs ...AttrRenderer) Tag                { return TagBuilder("dt")(attrs...) }
-func Em(attrs ...AttrRenderer) Tag                { return TagBuilder("em")(attrs...) }
-func Embed(attrs ...AttrRenderer) SelfClosingTag  { return SelfClosingTagBuilder("embed")(attrs...) }
-func Fieldset(attrs ...AttrRenderer) Tag          { return TagBuilder("fieldset")(attrs...) }
-func Figcaption(attrs ...AttrRenderer) Tag        { return TagBuilder("figcaption")(attrs...) }
-func Figure(attrs ...AttrRenderer) Tag            { return TagBuilder("figure")(attrs...) }
-func Footer(attrs ...AttrRenderer) Tag            { return TagBuilder("footer")(attrs...) }
-func Form(attrs ...AttrRenderer) Tag              { return TagBuilder("form")(attrs...) }
-func H1(attrs ...AttrRenderer) Tag                { return TagBuilder("h1")(attrs...) }
-func H2(attrs ...AttrRenderer) Tag                { return TagBuilder("h2")(attrs...) }
-func H3(attrs ...AttrRenderer) Tag                { return TagBuilder("h3")(attrs...) }
-func H4(attrs ...AttrRenderer) Tag                { return TagBuilder("h4")(attrs...) }
-func H5(attrs ...AttrRenderer) Tag                { return TagBuilder("h5")(attrs...) }
-func H6(attrs ...AttrRenderer) Tag                { return TagBuilder("h6")(attrs...) }
-func Head(attrs ...AttrRenderer) Tag              { return TagBuilder("head")(attrs...) }
-func Header(attrs ...AttrRenderer) Tag            { return TagBuilder("header")(attrs...) }
-func Hr(attrs ...AttrRenderer) SelfClosingTag     { return SelfClosingTagBuilder("hr")(attrs...) }
-func HTML(attrs ...AttrRenderer) Tag              { return TagBuilder("html")(attrs...) }
-func I(attrs ...AttrRenderer) Tag                 { return TagBuilder("i")(attrs...) }
-func Iframe(attrs ...AttrRenderer) Tag            { return TagBuilder("iframe")(attrs...) }
-func Img(attrs ...AttrRenderer) SelfClosingTag    { return SelfClosingTagBuilder("img")(attrs...) }
-func Input(attrs ...AttrRenderer) SelfClosingTag  { return SelfClosingTagBuilder("input")(attrs...) }
-func Ins(attrs ...AttrRenderer) Tag               { return TagBuilder("ins")(attrs...) }
-func Kbd(attrs ...AttrRenderer) Tag               { return TagBuilder("kbd")(attrs...) }
-func Label(attrs ...AttrRenderer) Tag             { return TagBuilder("label")(attrs...) }
-func Legend(attrs ...AttrRenderer) Tag            { return TagBuilder("legend")(attrs...) }
-func Li(attrs ...AttrRenderer) Tag                { return TagBuilder("li")(attrs...) }
-func Link(attrs ...AttrRenderer) SelfClosingTag   { return SelfClosingTagBuilder("link")(attrs...) }
-func Main(attrs ...AttrRenderer) Tag              { return TagBuilder("main")(attrs...) }
-func Map(attrs ...AttrRenderer) Tag               { return TagBuilder("map")(attrs...) }
-func Mark(attrs ...AttrRenderer) Tag              { return TagBuilder("mark")(attrs...) }
-func Meta(attrs ...AttrRenderer) SelfClosingTag   { return SelfClosingTagBuilder("meta")(attrs...) }
-func Meter(attrs ...AttrRenderer) Tag             { return TagBuilder("meter")(attrs...) }
-func Nav(attrs ...AttrRenderer) Tag               { return TagBuilder("nav")(attrs...) }
-func Noscript(attrs ...AttrRenderer) Tag          { return TagBuilder("noscript")(attrs...) }
-func Object(attrs ...AttrRenderer) Tag            { return TagBuilder("object")(attrs...) }
-func Ol(attrs ...AttrRenderer) Tag                { return TagBuilder("ol")(attrs...) }
-func Optgroup(attrs ...AttrRenderer) Tag          { return TagBuilder("optgroup")(attrs...) }
-func Option(attrs ...AttrRenderer) Tag            { return TagBuilder("option")(attrs...) }
-func Output(attrs ...AttrRenderer) Tag            { return TagBuilder("output")(attrs...) }
-func P(attrs ...AttrRenderer) Tag                 { return TagBuilder("p")(attrs...) }
-func Param(attrs ...AttrRenderer) SelfClosingTag  { return SelfClosingTagBuilder("param")(attrs...) }
-func Picture(attrs ...AttrRenderer) Tag           { return TagBuilder("picture")(attrs...) }
-func Pre(attrs ...AttrRenderer) Tag               { return TagBuilder("pre")(attrs...) }
-func Progress(attrs ...AttrRenderer) Tag          { return TagBuilder("progress")(attrs...) }
-func Q(attrs ...AttrRenderer) Tag                 { return TagBuilder("q")(attrs...) }
-func Rp(attrs ...AttrRenderer) Tag                { return TagBuilder("rp")(attrs...) }
-func Rt(attrs ...AttrRenderer) Tag                { return TagBuilder("rt")(attrs...) }
-func Ruby(attrs ...AttrRenderer) Tag              { return TagBuilder("ruby")(attrs...) }
-func S(attrs ...AttrRenderer) Tag                 { return TagBuilder("s")(attrs...) }
-func Samp(attrs ...AttrRenderer) Tag              { return TagBuilder("samp")(attrs...) }
-func Script(attrs ...AttrRenderer) Tag            { return TagBuilder("script")(attrs...) }
-func Section(attrs ...AttrRenderer) Tag           { return TagBuilder("section")(attrs...) }
-func Select(attrs ...AttrRenderer) Tag            { return TagBuilder("select")(attrs...) }
-func Slot(attrs ...AttrRenderer) Tag              { return TagBuilder("slot")(attrs...) }
-func Small(attrs ...AttrRenderer) Tag             { return TagBuilder("small")(attrs...) }
-func Source(attrs ...AttrRenderer) SelfClosingTag { return SelfClosingTagBuilder("source")(attrs...) }
-func Span(attrs ...AttrRenderer) Tag              { return TagBuilder("span")(attrs...) }
-func Strong(attrs ...AttrRenderer) Tag            { return TagBuilder("strong")(attrs...) }
-func Style(attrs ...AttrRenderer) Tag             { return TagBuilder("style")(attrs...) }
-func Sub(attrs ...AttrRenderer) Tag               { return TagBuilder("sub")(attrs...) }
-func Summary(attrs ...AttrRenderer) Tag           { return TagBuilder("summary")(attrs...) }
-func Sup(attrs ...AttrRenderer) Tag               { return TagBuilder("sup")(attrs...) }
-func Table(attrs ...AttrRenderer) Tag             { return TagBuilder("table")(attrs...) }
-func Tbody(attrs ...AttrRenderer) Tag             { return TagBuilder("tbody")(attrs...) }
-func Td(attrs ...AttrRenderer) Tag                { return TagBuilder("td")(attrs...) }
-func Template(attrs ...AttrRenderer) Tag          { return TagBuilder("template")(attrs...) }
-func Textarea(attrs ...AttrRenderer) Tag          { return TagBuilder("textarea")(attrs...) }
-func Tfoot(attrs ...AttrRenderer) Tag             { return TagBuilder("tfoot")(attrs...) }
-func Th(attrs ...AttrRenderer) Tag                { return TagBuilder("th")(attrs...) }
-func Thead(attrs ...AttrRenderer) Tag             { return TagBuilder("thead")(attrs...) }
-func Time(attrs ...AttrRenderer) Tag              { return TagBuilder("time")(attrs...) }
-func Title(attrs ...AttrRenderer) Tag             { return TagBuilder("title")(attrs...) }
-func Tr(attrs ...AttrRenderer) Tag                { return TagBuilder("tr")(attrs...) }
-func Track(attrs ...AttrRenderer) SelfClosingTag  { return SelfClosingTagBuilder("track")(attrs...) }
-func U(attrs ...AttrRenderer) Tag                 { return TagBuilder("u")(attrs...) }
-func Ul(attrs ...AttrRenderer) Tag                { return TagBuilder("ul")(attrs...) }
-func Var(attrs ...AttrRenderer) Tag               { return TagBuilder("var")(attrs...) }
-func Video(attrs ...AttrRenderer) Tag             { return TagBuilder("video")(attrs...) }
-func Wbr(attrs ...AttrRenderer) SelfClosingTag    { return SelfClosingTagBuilder("wbr")(attrs...) }
+func A(attrs ...Attr) CommonTag           { return TagBuilder("a")(attrs...) }
+func Abbr(attrs ...Attr) CommonTag        { return TagBuilder("abbr")(attrs...) }
+func Address(attrs ...Attr) CommonTag     { return TagBuilder("address")(attrs...) }
+func Area(attrs ...Attr) SelfClosingTag   { return SelfClosingTagBuilder("area")(attrs...) }
+func Article(attrs ...Attr) CommonTag     { return TagBuilder("article")(attrs...) }
+func Aside(attrs ...Attr) CommonTag       { return TagBuilder("aside")(attrs...) }
+func Audio(attrs ...Attr) CommonTag       { return TagBuilder("audio")(attrs...) }
+func B(attrs ...Attr) CommonTag           { return TagBuilder("b")(attrs...) }
+func Base(attrs ...Attr) SelfClosingTag   { return SelfClosingTagBuilder("base")(attrs...) }
+func Bdi(attrs ...Attr) CommonTag         { return TagBuilder("bdi")(attrs...) }
+func Bdo(attrs ...Attr) CommonTag         { return TagBuilder("bdo")(attrs...) }
+func Blockquote(attrs ...Attr) CommonTag  { return TagBuilder("blockquote")(attrs...) }
+func Body(attrs ...Attr) CommonTag        { return TagBuilder("body")(attrs...) }
+func Br(attrs ...Attr) SelfClosingTag     { return SelfClosingTagBuilder("br")(attrs...) }
+func Button(attrs ...Attr) CommonTag      { return TagBuilder("button")(attrs...) }
+func Canvas(attrs ...Attr) CommonTag      { return TagBuilder("canvas")(attrs...) }
+func Caption(attrs ...Attr) CommonTag     { return TagBuilder("caption")(attrs...) }
+func Cite(attrs ...Attr) CommonTag        { return TagBuilder("cite")(attrs...) }
+func Code(attrs ...Attr) CommonTag        { return TagBuilder("code")(attrs...) }
+func Col(attrs ...Attr) SelfClosingTag    { return SelfClosingTagBuilder("col")(attrs...) }
+func Colgroup(attrs ...Attr) CommonTag    { return TagBuilder("colgroup")(attrs...) }
+func Data(attrs ...Attr) CommonTag        { return TagBuilder("data")(attrs...) }
+func Datalist(attrs ...Attr) CommonTag    { return TagBuilder("datalist")(attrs...) }
+func Dd(attrs ...Attr) CommonTag          { return TagBuilder("dd")(attrs...) }
+func Del(attrs ...Attr) CommonTag         { return TagBuilder("del")(attrs...) }
+func Details(attrs ...Attr) CommonTag     { return TagBuilder("details")(attrs...) }
+func Dfn(attrs ...Attr) CommonTag         { return TagBuilder("dfn")(attrs...) }
+func Dialog(attrs ...Attr) CommonTag      { return TagBuilder("dialog")(attrs...) }
+func Div(attrs ...Attr) CommonTag         { return TagBuilder("div")(attrs...) }
+func Dl(attrs ...Attr) CommonTag          { return TagBuilder("dl")(attrs...) }
+func Dt(attrs ...Attr) CommonTag          { return TagBuilder("dt")(attrs...) }
+func Em(attrs ...Attr) CommonTag          { return TagBuilder("em")(attrs...) }
+func Embed(attrs ...Attr) SelfClosingTag  { return SelfClosingTagBuilder("embed")(attrs...) }
+func Fieldset(attrs ...Attr) CommonTag    { return TagBuilder("fieldset")(attrs...) }
+func Figcaption(attrs ...Attr) CommonTag  { return TagBuilder("figcaption")(attrs...) }
+func Figure(attrs ...Attr) CommonTag      { return TagBuilder("figure")(attrs...) }
+func Footer(attrs ...Attr) CommonTag      { return TagBuilder("footer")(attrs...) }
+func Form(attrs ...Attr) CommonTag        { return TagBuilder("form")(attrs...) }
+func H1(attrs ...Attr) CommonTag          { return TagBuilder("h1")(attrs...) }
+func H2(attrs ...Attr) CommonTag          { return TagBuilder("h2")(attrs...) }
+func H3(attrs ...Attr) CommonTag          { return TagBuilder("h3")(attrs...) }
+func H4(attrs ...Attr) CommonTag          { return TagBuilder("h4")(attrs...) }
+func H5(attrs ...Attr) CommonTag          { return TagBuilder("h5")(attrs...) }
+func H6(attrs ...Attr) CommonTag          { return TagBuilder("h6")(attrs...) }
+func Head(attrs ...Attr) CommonTag        { return TagBuilder("head")(attrs...) }
+func Header(attrs ...Attr) CommonTag      { return TagBuilder("header")(attrs...) }
+func Hr(attrs ...Attr) SelfClosingTag     { return SelfClosingTagBuilder("hr")(attrs...) }
+func HTML(attrs ...Attr) CommonTag        { return TagBuilder("html")(attrs...) }
+func I(attrs ...Attr) CommonTag           { return TagBuilder("i")(attrs...) }
+func Iframe(attrs ...Attr) CommonTag      { return TagBuilder("iframe")(attrs...) }
+func Img(attrs ...Attr) SelfClosingTag    { return SelfClosingTagBuilder("img")(attrs...) }
+func Input(attrs ...Attr) SelfClosingTag  { return SelfClosingTagBuilder("input")(attrs...) }
+func Ins(attrs ...Attr) CommonTag         { return TagBuilder("ins")(attrs...) }
+func Kbd(attrs ...Attr) CommonTag         { return TagBuilder("kbd")(attrs...) }
+func Label(attrs ...Attr) CommonTag       { return TagBuilder("label")(attrs...) }
+func Legend(attrs ...Attr) CommonTag      { return TagBuilder("legend")(attrs...) }
+func Li(attrs ...Attr) CommonTag          { return TagBuilder("li")(attrs...) }
+func Link(attrs ...Attr) SelfClosingTag   { return SelfClosingTagBuilder("link")(attrs...) }
+func Main(attrs ...Attr) CommonTag        { return TagBuilder("main")(attrs...) }
+func Map(attrs ...Attr) CommonTag         { return TagBuilder("map")(attrs...) }
+func Mark(attrs ...Attr) CommonTag        { return TagBuilder("mark")(attrs...) }
+func Meta(attrs ...Attr) SelfClosingTag   { return SelfClosingTagBuilder("meta")(attrs...) }
+func Meter(attrs ...Attr) CommonTag       { return TagBuilder("meter")(attrs...) }
+func Nav(attrs ...Attr) CommonTag         { return TagBuilder("nav")(attrs...) }
+func Noscript(attrs ...Attr) CommonTag    { return TagBuilder("noscript")(attrs...) }
+func Object(attrs ...Attr) CommonTag      { return TagBuilder("object")(attrs...) }
+func Ol(attrs ...Attr) CommonTag          { return TagBuilder("ol")(attrs...) }
+func Optgroup(attrs ...Attr) CommonTag    { return TagBuilder("optgroup")(attrs...) }
+func Option(attrs ...Attr) CommonTag      { return TagBuilder("option")(attrs...) }
+func Output(attrs ...Attr) CommonTag      { return TagBuilder("output")(attrs...) }
+func P(attrs ...Attr) CommonTag           { return TagBuilder("p")(attrs...) }
+func Param(attrs ...Attr) SelfClosingTag  { return SelfClosingTagBuilder("param")(attrs...) }
+func Picture(attrs ...Attr) CommonTag     { return TagBuilder("picture")(attrs...) }
+func Pre(attrs ...Attr) CommonTag         { return TagBuilder("pre")(attrs...) }
+func Progress(attrs ...Attr) CommonTag    { return TagBuilder("progress")(attrs...) }
+func Q(attrs ...Attr) CommonTag           { return TagBuilder("q")(attrs...) }
+func Rp(attrs ...Attr) CommonTag          { return TagBuilder("rp")(attrs...) }
+func Rt(attrs ...Attr) CommonTag          { return TagBuilder("rt")(attrs...) }
+func Ruby(attrs ...Attr) CommonTag        { return TagBuilder("ruby")(attrs...) }
+func S(attrs ...Attr) CommonTag           { return TagBuilder("s")(attrs...) }
+func Samp(attrs ...Attr) CommonTag        { return TagBuilder("samp")(attrs...) }
+func Script(attrs ...Attr) CommonTag      { return TagBuilder("script")(attrs...) }
+func Section(attrs ...Attr) CommonTag     { return TagBuilder("section")(attrs...) }
+func Select(attrs ...Attr) CommonTag      { return TagBuilder("select")(attrs...) }
+func Slot(attrs ...Attr) CommonTag        { return TagBuilder("slot")(attrs...) }
+func Small(attrs ...Attr) CommonTag       { return TagBuilder("small")(attrs...) }
+func Source(attrs ...Attr) SelfClosingTag { return SelfClosingTagBuilder("source")(attrs...) }
+func Span(attrs ...Attr) CommonTag        { return TagBuilder("span")(attrs...) }
+func Strong(attrs ...Attr) CommonTag      { return TagBuilder("strong")(attrs...) }
+func Style(attrs ...Attr) CommonTag       { return TagBuilder("style")(attrs...) }
+func Sub(attrs ...Attr) CommonTag         { return TagBuilder("sub")(attrs...) }
+func Summary(attrs ...Attr) CommonTag     { return TagBuilder("summary")(attrs...) }
+func Sup(attrs ...Attr) CommonTag         { return TagBuilder("sup")(attrs...) }
+func Table(attrs ...Attr) CommonTag       { return TagBuilder("table")(attrs...) }
+func Tbody(attrs ...Attr) CommonTag       { return TagBuilder("tbody")(attrs...) }
+func Td(attrs ...Attr) CommonTag          { return TagBuilder("td")(attrs...) }
+func Template(attrs ...Attr) CommonTag    { return TagBuilder("template")(attrs...) }
+func Textarea(attrs ...Attr) CommonTag    { return TagBuilder("textarea")(attrs...) }
+func Tfoot(attrs ...Attr) CommonTag       { return TagBuilder("tfoot")(attrs...) }
+func Th(attrs ...Attr) CommonTag          { return TagBuilder("th")(attrs...) }
+func Thead(attrs ...Attr) CommonTag       { return TagBuilder("thead")(attrs...) }
+func Time(attrs ...Attr) CommonTag        { return TagBuilder("time")(attrs...) }
+func Title(attrs ...Attr) CommonTag       { return TagBuilder("title")(attrs...) }
+func Tr(attrs ...Attr) CommonTag          { return TagBuilder("tr")(attrs...) }
+func Track(attrs ...Attr) SelfClosingTag  { return SelfClosingTagBuilder("track")(attrs...) }
+func U(attrs ...Attr) CommonTag           { return TagBuilder("u")(attrs...) }
+func Ul(attrs ...Attr) CommonTag          { return TagBuilder("ul")(attrs...) }
+func Var(attrs ...Attr) CommonTag         { return TagBuilder("var")(attrs...) }
+func Video(attrs ...Attr) CommonTag       { return TagBuilder("video")(attrs...) }
+func Wbr(attrs ...Attr) SelfClosingTag    { return SelfClosingTagBuilder("wbr")(attrs...) }

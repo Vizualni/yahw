@@ -4,14 +4,14 @@ import (
 	"io"
 )
 
-type AddAttributter interface {
-	AddAttributes(...AttrRenderer) TagRenderer
+type Renderable interface {
+	Render(w io.Writer) error
 }
 
-type TagRenderer interface {
-	TagRender(w io.Writer) error
+type Tag interface {
+	Tag() Renderable
 }
 
-type AttrRenderer interface {
-	AttrRender(w io.Writer) error
+type Attr interface {
+	Attr() Renderable
 }

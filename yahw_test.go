@@ -20,7 +20,7 @@ func TestSomewhatRealworldExample(t *testing.T) {
 	)
 
 	strbuf := &strings.Builder{}
-	err := root.TagRender(strbuf)
+	err := root.Render(strbuf)
 	if err != nil {
 		t.Errorf("Error rendering: %s", err)
 	}

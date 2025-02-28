@@ -4,56 +4,56 @@ import "io"
 
 type IfElseTag struct {
 	cond bool
-	then TagRenderer
-	els  TagRenderer
+	then Tag
+	els  Tag
 }
 
-func If(cond bool, then TagRenderer) IfElseTag {
+func If(cond bool, then Tag) IfElseTag {
 	return IfElseTag{cond: cond, then: then}
 }
 
-func (ie IfElseTag) Else(els TagRenderer) IfElseTag {
+func (ie IfElseTag) Else(els Tag) IfElseTag {
 	ie.els = els
 	return ie
 }
 
-func (t IfElseTag) TagRender(w io.Writer) error {
+func (t IfElseTag) Render(w io.Writer) error {
 	if t.cond {
 		if t.then == nil {
 			return nil
 		}
-		return t.then.TagRender(w)
+		return t.then.Tag().Render(w)
 	}
 	if t.els == nil {
 		return nil
 	}
-	return t.els.TagRender(w)
+	return t.els.Tag().Render(w)
 }
 
 type IfElseAttr struct {
 	cond bool
-	then AttrRenderer
-	els  AttrRenderer
+	then Attr
+	els  Attr
 }
 
-func IfAttr(cond bool, then AttrRenderer) IfElseAttr {
+func IfAttr(cond bool, then Attr) IfElseAttr {
 	return IfElseAttr{cond: cond, then: then}
 }
 
-func (ie IfElseAttr) Else(els AttrRenderer) IfElseAttr {
+func (ie IfElseAttr) Else(els Attr) IfElseAttr {
 	ie.els = els
 	return ie
 }
 
-func (t IfElseAttr) AttrRender(w io.Writer) error {
+func (t IfElseAttr) Render(w io.Writer) error {
 	if t.cond {
 		if t.then == nil {
 			return nil
 		}
-		return t.then.AttrRender(w)
+		return t.then.Attr().Render(w)
 	}
 	if t.els == nil {
 		return nil
 	}
-	return t.els.AttrRender(w)
+	return t.els.Attr().Render(w)
 }

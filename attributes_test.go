@@ -9,10 +9,8 @@ func assertEqual(t *testing.T, r any, expected string) {
 	strbuf := &strings.Builder{}
 	var err error
 	switch r := r.(type) {
-	case TagRenderer:
-		err = r.TagRender(strbuf)
-	case AttrRenderer:
-		err = r.AttrRender(strbuf)
+	case Renderable:
+		err = r.Render(strbuf)
 	default:
 		t.Errorf("Unknown type: %T", r)
 	}
@@ -88,7 +86,7 @@ func TestCreatingInvalidAttrs(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.Name, func(t *testing.T) {
-			assertPanic(t, func() { Attr(tc.AttrName, tc.AttrVal) })
+			assertPanic(t, func() { BuildAttr(tc.AttrName, tc.AttrVal) })
 		})
 	}
 }

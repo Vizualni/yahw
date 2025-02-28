@@ -25,7 +25,7 @@ func isValidAttrName(name string) bool {
 	return true
 }
 
-func Attr(key, value string) Attribute {
+func BuildAttr(key, value string) Attribute {
 	if !isValidAttrName(key) {
 		panic("Invalid attribute name: " + key)
 	}
@@ -46,7 +46,7 @@ func NoValAttr(key string) NoValAttribute {
 
 func AttrBuilder(key string) func(string) Attribute {
 	return func(value string) Attribute {
-		return Attr(key, value)
+		return BuildAttr(key, value)
 	}
 }
 
@@ -55,7 +55,9 @@ type Attribute struct {
 	value string
 }
 
-func (a Attribute) AttrRender(w io.Writer) error {
+func (a Attribute) Attr() Renderable { return a }
+
+func (a Attribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	escapedValue := html.EscapeString(a.value)
 	_, err := w.Write([]byte(escapedKey + `="` + escapedValue + `"`))
@@ -69,7 +71,9 @@ type NoValAttribute struct {
 	key string
 }
 
-func (a NoValAttribute) AttrRender(w io.Writer) error {
+func (a NoValAttribute) Attr() Renderable { return a }
+
+func (a NoValAttribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	_, err := w.Write([]byte(escapedKey))
 	if err != nil {
@@ -78,9 +82,11 @@ func (a NoValAttribute) AttrRender(w io.Writer) error {
 	return nil
 }
 
-type AttrSlice []AttrRenderer
+type AttrSlice []Attr
 
-func (a AttrSlice) AttrRender(w io.Writer) error {
+func (a AttrSlice) Attr() Renderable { return a }
+
+func (a AttrSlice) Render(w io.Writer) error {
 	for i, attr := range a {
 		if i > 0 {
 			_, err := w.Write([]byte(" "))
@@ -91,7 +97,7 @@ func (a AttrSlice) AttrRender(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err := attr.AttrRender(w)
+		err := attr.Attr().Render(w)
 		if err != nil {
 			return err
 		}
@@ -99,7 +105,7 @@ func (a AttrSlice) AttrRender(w io.Writer) error {
 	return nil
 }
 
-func (a AttrSlice) Add(i AttrRenderer) AttrSlice {
+func (a AttrSlice) Add(i Attr) AttrSlice {
 	return append(a[:], i)
 }
 
@@ -136,7 +142,9 @@ func extractClasses(cls string) []string {
 
 type Classes string
 
-func (c Classes) AttrRender(w io.Writer) error {
+func (c Classes) Attr() Renderable { return c }
+
+func (c Classes) Render(w io.Writer) error {
 	res := extractClasses(string(c))
 	_, err := w.Write([]byte(`class="` + strings.Join(res, " ") + `"`))
 	if err != nil {
@@ -168,6 +176,8 @@ func (c Classes) MergeMap(m ClassesMap) Classes {
 
 type ClassesMap map[string]bool
 
+func (c ClassesMap) Attr() Renderable { return c }
+
 func (c ClassesMap) extract() string {
 	var sb strings.Builder
 	cnt := len(c)
@@ -186,7 +196,7 @@ func (c ClassesMap) extract() string {
 	return sb.String()
 }
 
-func (c ClassesMap) AttrRender(w io.Writer) error {
+func (c ClassesMap) Render(w io.Writer) error {
 	s := c.extract()
 	_, err := w.Write([]byte(`class="` + s + `"`))
 	if err != nil {
@@ -205,8 +215,8 @@ func (c ClassesMap) Add(s string) ClassesMap {
 	return newMap
 }
 
-func AttachAttrs(t TagRenderer, attrs ...AttrRenderer) TagRenderer {
-	tv, ok := t.(Tag)
+func AttachAttrs(t Tag, attrs ...Attr) Tag {
+	tv, ok := t.(CommonTag)
 	if !ok {
 		slog.Warn("unable to attach attrs", slog.Any("tag", t))
 		return t
@@ -218,122 +228,126 @@ func AttachAttrs(t TagRenderer, attrs ...AttrRenderer) TagRenderer {
 
 // All common attributes
 
-func ID(id string) Attribute { return Attr("id", id) }
+func ID(id string) Attribute { return BuildAttr("id", id) }
 
-func OnClick(handler string) Attribute     { return Attr("onclick", handler) }
-func OnChange(handler string) Attribute    { return Attr("onchange", handler) }
-func OnMouseOver(handler string) Attribute { return Attr("onmouseover", handler) }
-func OnMouseOut(handler string) Attribute  { return Attr("onmouseout", handler) }
-func OnMouseDown(handler string) Attribute { return Attr("onmousedown", handler) }
-func OnMouseUp(handler string) Attribute   { return Attr("onmouseup", handler) }
-func OnFocus(handler string) Attribute     { return Attr("onfocus", handler) }
-func OnBlur(handler string) Attribute      { return Attr("onblur", handler) }
-func OnKeyDown(handler string) Attribute   { return Attr("onkeydown", handler) }
-func OnKeyPress(handler string) Attribute  { return Attr("onkeypress", handler) }
-func OnKeyUp(handler string) Attribute     { return Attr("onkeyup", handler) }
-func OnLoad(handler string) Attribute      { return Attr("onload", handler) }
-func OnSubmit(handler string) Attribute    { return Attr("onsubmit", handler) }
-func OnReset(handler string) Attribute     { return Attr("onreset", handler) }
-func OnSelect(handler string) Attribute    { return Attr("onselect", handler) }
-func OnAbort(handler string) Attribute     { return Attr("onabort", handler) }
-func OnError(handler string) Attribute     { return Attr("onerror", handler) }
-func OnResize(handler string) Attribute    { return Attr("onresize", handler) }
-func OnScroll(handler string) Attribute    { return Attr("onscroll", handler) }
-func OnUnload(handler string) Attribute    { return Attr("onunload", handler) }
+func OnClick(handler string) Attribute     { return BuildAttr("onclick", handler) }
+func OnChange(handler string) Attribute    { return BuildAttr("onchange", handler) }
+func OnMouseOver(handler string) Attribute { return BuildAttr("onmouseover", handler) }
+func OnMouseOut(handler string) Attribute  { return BuildAttr("onmouseout", handler) }
+func OnMouseDown(handler string) Attribute { return BuildAttr("onmousedown", handler) }
+func OnMouseUp(handler string) Attribute   { return BuildAttr("onmouseup", handler) }
+func OnFocus(handler string) Attribute     { return BuildAttr("onfocus", handler) }
+func OnBlur(handler string) Attribute      { return BuildAttr("onblur", handler) }
+func OnKeyDown(handler string) Attribute   { return BuildAttr("onkeydown", handler) }
+func OnKeyPress(handler string) Attribute  { return BuildAttr("onkeypress", handler) }
+func OnKeyUp(handler string) Attribute     { return BuildAttr("onkeyup", handler) }
+func OnLoad(handler string) Attribute      { return BuildAttr("onload", handler) }
+func OnSubmit(handler string) Attribute    { return BuildAttr("onsubmit", handler) }
+func OnReset(handler string) Attribute     { return BuildAttr("onreset", handler) }
+func OnSelect(handler string) Attribute    { return BuildAttr("onselect", handler) }
+func OnAbort(handler string) Attribute     { return BuildAttr("onabort", handler) }
+func OnError(handler string) Attribute     { return BuildAttr("onerror", handler) }
+func OnResize(handler string) Attribute    { return BuildAttr("onresize", handler) }
+func OnScroll(handler string) Attribute    { return BuildAttr("onscroll", handler) }
+func OnUnload(handler string) Attribute    { return BuildAttr("onunload", handler) }
 
 // Global attributes
 
-func Class(class string) Attribute         { return Attr("class", class) }
-func Lang(lang string) Attribute           { return Attr("lang", lang) }
-func Dir(dir string) Attribute             { return Attr("dir", dir) }
-func AccessKey(accessKey string) Attribute { return Attr("accesskey", accessKey) }
-func TabIndex(tabIndex string) Attribute   { return Attr("tabindex", tabIndex) }
+func Class(class string) Attribute         { return BuildAttr("class", class) }
+func Lang(lang string) Attribute           { return BuildAttr("lang", lang) }
+func Dir(dir string) Attribute             { return BuildAttr("dir", dir) }
+func AccessKey(accessKey string) Attribute { return BuildAttr("accesskey", accessKey) }
+func TabIndex(tabIndex string) Attribute   { return BuildAttr("tabindex", tabIndex) }
 func ContentEditable(contentEditable string) Attribute {
-	return Attr("contenteditable", contentEditable)
+	return BuildAttr("contenteditable", contentEditable)
 }
-func ContextMenu(contextMenu string) Attribute       { return Attr("contextmenu", contextMenu) }
-func Draggable(draggable string) Attribute           { return Attr("draggable", draggable) }
-func DropZone(dropZone string) Attribute             { return Attr("dropzone", dropZone) }
-func Hidden(hidden string) Attribute                 { return Attr("hidden", hidden) }
-func SpellCheck(spellCheck string) Attribute         { return Attr("spellcheck", spellCheck) }
-func Translate(translate string) Attribute           { return Attr("translate", translate) }
-func Role(role string) Attribute                     { return Attr("role", role) }
-func AutoFocus(autoFocus string) Attribute           { return Attr("autofocus", autoFocus) }
-func AutoComplete(autoComplete string) Attribute     { return Attr("autocomplete", autoComplete) }
-func AutoSave(autoSave string) Attribute             { return Attr("autosave", autoSave) }
-func FormAttr(form string) Attribute                 { return Attr("form", form) }
-func EncType(encType string) Attribute               { return Attr("enctype", encType) }
-func Accept(accept string) Attribute                 { return Attr("accept", accept) }
-func FormAction(formAction string) Attribute         { return Attr("formaction", formAction) }
-func FormEncType(formEncType string) Attribute       { return Attr("formenctype", formEncType) }
-func FormMethod(formMethod string) Attribute         { return Attr("formmethod", formMethod) }
-func FormNoValidate(formNoValidate string) Attribute { return Attr("formnovalidate", formNoValidate) }
-func FormTarget(formTarget string) Attribute         { return Attr("formtarget", formTarget) }
-func List(list string) Attribute                     { return Attr("list", list) }
-func Max(max string) Attribute                       { return Attr("max", max) }
-func Min(min string) Attribute                       { return Attr("min", min) }
-func Multiple(multiple string) Attribute             { return Attr("multiple", multiple) }
-func Pattern(pattern string) Attribute               { return Attr("pattern", pattern) }
-func Placeholder(placeholder string) Attribute       { return Attr("placeholder", placeholder) }
-func ReadOnly() NoValAttribute                       { return NoValAttr("readonly") }
-func Required() NoValAttribute                       { return NoValAttr("required") }
-func Size(size string) Attribute                     { return Attr("size", size) }
-func Src(src string) Attribute                       { return Attr("src", src) }
-func Step(step string) Attribute                     { return Attr("step", step) }
-func Width(width string) Attribute                   { return Attr("width", width) }
-func Height(height string) Attribute                 { return Attr("height", height) }
-func Alt(alt string) Attribute                       { return Attr("alt", alt) }
-func UseMap(useMap string) Attribute                 { return Attr("usemap", useMap) }
-func IsMap(isMap string) Attribute                   { return Attr("ismap", isMap) }
-func LongDesc(longDesc string) Attribute             { return Attr("longdesc", longDesc) }
-func SrcSet(srcSet string) Attribute                 { return Attr("srcset", srcSet) }
-func Sizes(sizes string) Attribute                   { return Attr("sizes", sizes) }
-func CrossOrigin(crossOrigin string) Attribute       { return Attr("crossorigin", crossOrigin) }
-func Media(media string) Attribute                   { return Attr("media", media) }
-func Type(type_ string) Attribute                    { return Attr("type", type_) }
-func Charset(charset string) Attribute               { return Attr("charset", charset) }
-func Href(href string) Attribute                     { return Attr("href", href) }
-func HrefLang(hrefLang string) Attribute             { return Attr("hreflang", hrefLang) }
-func Rel(rel string) Attribute                       { return Attr("rel", rel) }
-func Rev(rev string) Attribute                       { return Attr("rev", rev) }
-func Target(target string) Attribute                 { return Attr("target", target) }
-func Download(download string) Attribute             { return Attr("download", download) }
-func Ping(ping string) Attribute                     { return Attr("ping", ping) }
-func ReferrerPolicy(referrerPolicy string) Attribute { return Attr("referrerpolicy", referrerPolicy) }
-func Integrity(integrity string) Attribute           { return Attr("integrity", integrity) }
-func Content(content string) Attribute               { return Attr("content", content) }
-func HttpEquiv(httpEquiv string) Attribute           { return Attr("http-equiv", httpEquiv) }
-func Name(name string) Attribute                     { return Attr("name", name) }
-func Scheme(scheme string) Attribute                 { return Attr("scheme", scheme) }
-func Coords(coords string) Attribute                 { return Attr("coords", coords) }
-func Shape(shape string) Attribute                   { return Attr("shape", shape) }
-func Axis(axis string) Attribute                     { return Attr("axis", axis) }
-func Headers(headers string) Attribute               { return Attr("headers", headers) }
-func Scope(scope string) Attribute                   { return Attr("scope", scope) }
-func ColSpan(colSpan string) Attribute               { return Attr("colspan", colSpan) }
-func RowSpan(rowSpan string) Attribute               { return Attr("rowspan", rowSpan) }
-func Action(action string) Attribute                 { return Attr("action", action) }
-func Method(method string) Attribute                 { return Attr("method", method) }
-func NoValidate() NoValAttribute                     { return NoValAttr("novalidate") }
+func ContextMenu(contextMenu string) Attribute   { return BuildAttr("contextmenu", contextMenu) }
+func Draggable(draggable string) Attribute       { return BuildAttr("draggable", draggable) }
+func DropZone(dropZone string) Attribute         { return BuildAttr("dropzone", dropZone) }
+func Hidden(hidden string) Attribute             { return BuildAttr("hidden", hidden) }
+func SpellCheck(spellCheck string) Attribute     { return BuildAttr("spellcheck", spellCheck) }
+func Translate(translate string) Attribute       { return BuildAttr("translate", translate) }
+func Role(role string) Attribute                 { return BuildAttr("role", role) }
+func AutoFocus(autoFocus string) Attribute       { return BuildAttr("autofocus", autoFocus) }
+func AutoComplete(autoComplete string) Attribute { return BuildAttr("autocomplete", autoComplete) }
+func AutoSave(autoSave string) Attribute         { return BuildAttr("autosave", autoSave) }
+func FormAttr(form string) Attribute             { return BuildAttr("form", form) }
+func EncType(encType string) Attribute           { return BuildAttr("enctype", encType) }
+func Accept(accept string) Attribute             { return BuildAttr("accept", accept) }
+func FormAction(formAction string) Attribute     { return BuildAttr("formaction", formAction) }
+func FormEncType(formEncType string) Attribute   { return BuildAttr("formenctype", formEncType) }
+func FormMethod(formMethod string) Attribute     { return BuildAttr("formmethod", formMethod) }
+func FormNoValidate(formNoValidate string) Attribute {
+	return BuildAttr("formnovalidate", formNoValidate)
+}
+func FormTarget(formTarget string) Attribute   { return BuildAttr("formtarget", formTarget) }
+func List(list string) Attribute               { return BuildAttr("list", list) }
+func Max(max string) Attribute                 { return BuildAttr("max", max) }
+func Min(min string) Attribute                 { return BuildAttr("min", min) }
+func Multiple(multiple string) Attribute       { return BuildAttr("multiple", multiple) }
+func Pattern(pattern string) Attribute         { return BuildAttr("pattern", pattern) }
+func Placeholder(placeholder string) Attribute { return BuildAttr("placeholder", placeholder) }
+func ReadOnly() NoValAttribute                 { return NoValAttr("readonly") }
+func Required() NoValAttribute                 { return NoValAttr("required") }
+func Size(size string) Attribute               { return BuildAttr("size", size) }
+func Src(src string) Attribute                 { return BuildAttr("src", src) }
+func Step(step string) Attribute               { return BuildAttr("step", step) }
+func Width(width string) Attribute             { return BuildAttr("width", width) }
+func Height(height string) Attribute           { return BuildAttr("height", height) }
+func Alt(alt string) Attribute                 { return BuildAttr("alt", alt) }
+func UseMap(useMap string) Attribute           { return BuildAttr("usemap", useMap) }
+func IsMap(isMap string) Attribute             { return BuildAttr("ismap", isMap) }
+func LongDesc(longDesc string) Attribute       { return BuildAttr("longdesc", longDesc) }
+func SrcSet(srcSet string) Attribute           { return BuildAttr("srcset", srcSet) }
+func Sizes(sizes string) Attribute             { return BuildAttr("sizes", sizes) }
+func CrossOrigin(crossOrigin string) Attribute { return BuildAttr("crossorigin", crossOrigin) }
+func Media(media string) Attribute             { return BuildAttr("media", media) }
+func Type(type_ string) Attribute              { return BuildAttr("type", type_) }
+func Charset(charset string) Attribute         { return BuildAttr("charset", charset) }
+func Href(href string) Attribute               { return BuildAttr("href", href) }
+func HrefLang(hrefLang string) Attribute       { return BuildAttr("hreflang", hrefLang) }
+func Rel(rel string) Attribute                 { return BuildAttr("rel", rel) }
+func Rev(rev string) Attribute                 { return BuildAttr("rev", rev) }
+func Target(target string) Attribute           { return BuildAttr("target", target) }
+func Download(download string) Attribute       { return BuildAttr("download", download) }
+func Ping(ping string) Attribute               { return BuildAttr("ping", ping) }
+func ReferrerPolicy(referrerPolicy string) Attribute {
+	return BuildAttr("referrerpolicy", referrerPolicy)
+}
+func Integrity(integrity string) Attribute { return BuildAttr("integrity", integrity) }
+func Content(content string) Attribute     { return BuildAttr("content", content) }
+func HttpEquiv(httpEquiv string) Attribute { return BuildAttr("http-equiv", httpEquiv) }
+func Name(name string) Attribute           { return BuildAttr("name", name) }
+func Scheme(scheme string) Attribute       { return BuildAttr("scheme", scheme) }
+func Coords(coords string) Attribute       { return BuildAttr("coords", coords) }
+func Shape(shape string) Attribute         { return BuildAttr("shape", shape) }
+func Axis(axis string) Attribute           { return BuildAttr("axis", axis) }
+func Headers(headers string) Attribute     { return BuildAttr("headers", headers) }
+func Scope(scope string) Attribute         { return BuildAttr("scope", scope) }
+func ColSpan(colSpan string) Attribute     { return BuildAttr("colspan", colSpan) }
+func RowSpan(rowSpan string) Attribute     { return BuildAttr("rowspan", rowSpan) }
+func Action(action string) Attribute       { return BuildAttr("action", action) }
+func Method(method string) Attribute       { return BuildAttr("method", method) }
+func NoValidate() NoValAttribute           { return NoValAttr("novalidate") }
 
 // Additional common attributes
-func TitleAttr(title string) Attribute             { return Attr("title", title) }
-func StyleAttr(style string) Attribute             { return Attr("style", style) }
-func DataAttr(name string, value string) Attribute { return Attr("data-"+name, value) }
-func Aria(name string, value string) Attribute     { return Attr("aria-"+name, value) }
+func TitleAttr(title string) Attribute             { return BuildAttr("title", title) }
+func StyleAttr(style string) Attribute             { return BuildAttr("style", style) }
+func DataAttr(name string, value string) Attribute { return BuildAttr("data-"+name, value) }
+func Aria(name string, value string) Attribute     { return BuildAttr("aria-"+name, value) }
 func Disabled() NoValAttribute                     { return NoValAttr("disabled") }
 func Checked() NoValAttribute                      { return NoValAttr("checked") }
-func Value(value string) Attribute                 { return Attr("value", value) }
-func MaxLength(maxLength string) Attribute         { return Attr("maxlength", maxLength) }
-func MinLength(minLength string) Attribute         { return Attr("minlength", minLength) }
-func SrcLang(srclang string) Attribute             { return Attr("srclang", srclang) }
-func Kind(kind string) Attribute                   { return Attr("kind", kind) }
-func LabelAttr(label string) Attribute             { return Attr("label", label) }
-func Default(default_ string) Attribute            { return Attr("default", default_) }
-func KeyType(keytype string) Attribute             { return Attr("keytype", keytype) }
-func DateTime(datetime string) Attribute           { return Attr("datetime", datetime) }
-func For(for_ string) Attribute                    { return Attr("for", for_) }
-func HeadersAttr(headers string) Attribute         { return Attr("headers", headers) }
-func High(high string) Attribute                   { return Attr("high", high) }
-func Low(low string) Attribute                     { return Attr("low", low) }
-func Optimum(optimum string) Attribute             { return Attr("optimum", optimum) }
+func Value(value string) Attribute                 { return BuildAttr("value", value) }
+func MaxLength(maxLength string) Attribute         { return BuildAttr("maxlength", maxLength) }
+func MinLength(minLength string) Attribute         { return BuildAttr("minlength", minLength) }
+func SrcLang(srclang string) Attribute             { return BuildAttr("srclang", srclang) }
+func Kind(kind string) Attribute                   { return BuildAttr("kind", kind) }
+func LabelAttr(label string) Attribute             { return BuildAttr("label", label) }
+func Default(default_ string) Attribute            { return BuildAttr("default", default_) }
+func KeyType(keytype string) Attribute             { return BuildAttr("keytype", keytype) }
+func DateTime(datetime string) Attribute           { return BuildAttr("datetime", datetime) }
+func For(for_ string) Attribute                    { return BuildAttr("for", for_) }
+func HeadersAttr(headers string) Attribute         { return BuildAttr("headers", headers) }
+func High(high string) Attribute                   { return BuildAttr("high", high) }
+func Low(low string) Attribute                     { return BuildAttr("low", low) }
+func Optimum(optimum string) Attribute             { return BuildAttr("optimum", optimum) }
