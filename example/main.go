@@ -31,35 +31,39 @@ func MyCommonAttributes(link string) Node {
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		root := NewHTML5Doctype()
-		HTML(
-			Head(
-				Title((Text("My Custom Button Example")),
-					Style((Text("button { padding: 10px; border: none; }"))),
-					Body(
-						MyCustomButton{
-							Text:            "Click me!",
-							BackgroundColor: "red",
-						},
-						Br(),
-						MyCustomButton{
-							Text:            "No, click me!",
-							BackgroundColor: "green",
-						},
-						Br(),
-						MyCustomInput("name", "Enter your name"),
-						Br(),
-						MyCustomInput("email", "Enter your email"),
-						Br(),
-						A(MyCommonAttributes("https://example1.com"), Text("Click me!")),
-						Br(),
-						A(MyCommonAttributes("https://example2.com"), Text("No, click me!")),
+		root := NewHTML5Doctype(
+			HTML(
+				Head(
+					Title((Text("My Custom Button Example")),
+						Style((Text("button { padding: 10px; border: none; }"))),
+						Body(
+							MyCustomButton{
+								Text:            "Click me!",
+								BackgroundColor: "red",
+							},
+							Br(),
+							MyCustomButton{
+								Text:            "No, click me!",
+								BackgroundColor: "green",
+							},
+							Br(),
+							MyCustomInput("name", "Enter your name"),
+							Br(),
+							MyCustomInput("email", "Enter your email"),
+							Br(),
+							A(MyCommonAttributes("https://example1.com"), Text("Click me!")),
+							Br(),
+							A(MyCommonAttributes("https://example2.com"), Text("No, click me!")),
+						),
 					),
 				),
 			),
 		)
 
-		root.Render(w)
+		err := root.Render(w)
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	if err := http.ListenAndServe("127.0.0.1:8585", nil); err != nil {

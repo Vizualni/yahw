@@ -1,7 +1,6 @@
 package yahw
 
 import (
-	"fmt"
 	"io"
 )
 
@@ -28,16 +27,49 @@ func NewTag(tagName string) CommonTag {
 	}
 }
 
+func unwrap(n Node) Renderable {
+	r := n.Node()
+	for i := 0; i < 100; i++ {
+		switch t := r.(type) {
+		case Renderable:
+			r = t
+		default:
+			return r
+		}
+	}
+	panic("too many unwraps")
+}
+
 func TagBuilder(tagName string) func(...Node) CommonTag {
 	if !isValidTagName(tagName) {
 		panic("Invalid tag name: " + tagName)
 	}
 
-	return func(attrs ...Node) CommonTag {
-		return CommonTag{
+	return func(nodes ...Node) CommonTag {
+		ct := CommonTag{
 			tagName: tagName,
-			rendrs:  attrs,
 		}
+
+		for _, n := range nodes {
+			switch t := n.(type) {
+			case attrable:
+				ct.attrs = append(ct.attrs, t)
+			case taggable:
+				ct.tags = append(ct.tags, t)
+			default:
+				r := n.Node()
+				switch t := r.(type) {
+				case attrable:
+					ct.attrs = append(ct.attrs, t)
+				case taggable:
+					ct.tags = append(ct.tags, t)
+				default:
+					panic("invalid node type")
+				}
+			}
+		}
+
+		return ct
 	}
 }
 
@@ -137,49 +169,26 @@ func (t SelfClosingTag) Render(w io.Writer) error {
 
 type CommonTag struct {
 	tagName string
-	rendrs  []Node
+	attrs   []attrable
+	tags    []taggable
 }
 
 func (t CommonTag) tag()             {}
 func (t CommonTag) Node() Renderable { return t }
 
-func (t CommonTag) clone() CommonTag {
-	rendrs := make([]Node, len(t.rendrs))
-	copy(rendrs, t.rendrs)
-
-	return CommonTag{
-		tagName: t.tagName,
-		rendrs:  rendrs,
-	}
-}
-
 func (t CommonTag) Render(w io.Writer) error {
-	fmt.Println("CommonTag.Render", "NAME", t.tagName, "RENDERS", t.rendrs)
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
 		return err
 	}
 
-	attrs := AttrSlice{}
-	tags := TagSlice{}
-	for _, r := range t.rendrs {
-		switch t := r.(type) {
-		case attrable:
-			attrs = append(attrs, t)
-		case taggable:
-			tags = append(tags, t)
-		default:
-			panic("can only render attributes and tags")
-		}
-	}
-
-	if len(attrs) > 0 {
+	if len(t.attrs) > 0 {
 		w.Write([]byte(" "))
 	}
 
 	newAttrs := AttrSlice{}
 	toMerge := map[string]AttrSlice{}
-	for _, attr := range attrs {
+	for _, attr := range t.attrs {
 		switch t := attr.(type) {
 		case Classes, ClassesMap:
 			toMerge["class"] = append(toMerge["class"], t)
@@ -210,7 +219,7 @@ func (t CommonTag) Render(w io.Writer) error {
 			return err
 		}
 
-		if idx < len(attrs)-1 {
+		if idx < len(t.attrs)-1 {
 			w.Write([]byte(" "))
 		}
 	}
@@ -220,7 +229,7 @@ func (t CommonTag) Render(w io.Writer) error {
 		return err
 	}
 
-	for _, child := range tags {
+	for _, child := range t.tags {
 		if child == nil {
 			continue
 		}
