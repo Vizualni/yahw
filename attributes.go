@@ -3,7 +3,6 @@ package yahw
 import (
 	"html"
 	"io"
-	"log/slog"
 	"maps"
 	"strings"
 )
@@ -55,7 +54,8 @@ type Attribute struct {
 	value string
 }
 
-func (a Attribute) Attr() Renderable { return a }
+func (a Attribute) attr()            {}
+func (a Attribute) Node() Renderable { return a }
 
 func (a Attribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
@@ -71,7 +71,8 @@ type NoValAttribute struct {
 	key string
 }
 
-func (a NoValAttribute) Attr() Renderable { return a }
+func (a NoValAttribute) attr()            {}
+func (a NoValAttribute) Node() Renderable { return a }
 
 func (a NoValAttribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
@@ -82,9 +83,10 @@ func (a NoValAttribute) Render(w io.Writer) error {
 	return nil
 }
 
-type AttrSlice []Attr
+type AttrSlice []attrable
 
-func (a AttrSlice) Attr() Renderable { return a }
+func (a AttrSlice) attr()            {}
+func (a AttrSlice) Node() Renderable { return a }
 
 func (a AttrSlice) Render(w io.Writer) error {
 	for i, attr := range a {
@@ -97,7 +99,7 @@ func (a AttrSlice) Render(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err := attr.Attr().Render(w)
+		err := attr.Render(w)
 		if err != nil {
 			return err
 		}
@@ -105,7 +107,7 @@ func (a AttrSlice) Render(w io.Writer) error {
 	return nil
 }
 
-func (a AttrSlice) Add(i Attr) AttrSlice {
+func (a AttrSlice) Add(i attrable) AttrSlice {
 	return append(a[:], i)
 }
 
@@ -142,7 +144,8 @@ func extractClasses(cls string) []string {
 
 type Classes string
 
-func (c Classes) Attr() Renderable { return c }
+func (c Classes) attr()            {}
+func (c Classes) Node() Renderable { return c }
 
 func (c Classes) Render(w io.Writer) error {
 	res := extractClasses(string(c))
@@ -176,7 +179,8 @@ func (c Classes) MergeMap(m ClassesMap) Classes {
 
 type ClassesMap map[string]bool
 
-func (c ClassesMap) Attr() Renderable { return c }
+func (c ClassesMap) attr()            {}
+func (c ClassesMap) Node() Renderable { return c }
 
 func (c ClassesMap) extract() string {
 	var sb strings.Builder
@@ -213,17 +217,6 @@ func (c ClassesMap) Add(s string) ClassesMap {
 		newMap[cls] = true
 	}
 	return newMap
-}
-
-func AttachAttrs(t Tag, attrs ...Attr) Tag {
-	tv, ok := t.(CommonTag)
-	if !ok {
-		slog.Warn("unable to attach attrs", slog.Any("tag", t))
-		return t
-	}
-	clone := tv.clone()
-	clone.attrs = append(clone.attrs, attrs...)
-	return clone
 }
 
 // All common attributes

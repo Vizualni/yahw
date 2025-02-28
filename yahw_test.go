@@ -8,13 +8,13 @@ import (
 )
 
 func TestSomewhatRealworldExample(t *testing.T) {
-	root := NewHTML5Doctype().X(
-		HTML().X(
-			Title().X(Text("Hello, World!")),
-			Style().X(Text("body { background-color: #f0f0f0; }")),
-			Body().X(
-				H1().X(Text("Hello, World!")),
-				P(StyleAttr("color: red;")).X(Text("This is a paragraph.")),
+	root := NewHTML5Doctype(
+		HTML(
+			Title(Text("Hello, World!")),
+			Style(Text("body { background-color: #f0f0f0; }")),
+			Body(
+				H1(Text("Hello, World!")),
+				P(StyleAttr("color: red;"), Text("This is a paragraph.")),
 			),
 		),
 	)

@@ -18,15 +18,15 @@ func TestCreatingTags(t *testing.T) {
 
 		{Name: "Tag with two attributes", Tag: foo(BuildAttr("key1", "value1"), BuildAttr("key2", "value2")), Exp: "<foo key1=\"value1\" key2=\"value2\"></foo>"},
 
-		{Name: "Tag with a child", Tag: foo().X(bar()), Exp: "<foo><bar></bar></foo>"},
+		{Name: "Tag with a child", Tag: foo(bar()), Exp: "<foo><bar></bar></foo>"},
 
 		{Name: "Tag with a child and attrs", Tag: foo(
 			BuildAttr("key1", "value1"),
 			BuildAttr("key2", "value2"),
-		).X(bar(
-			BuildAttr("key3", "value3"),
-			BuildAttr("key4", "value4"),
-		)), Exp: "<foo key1=\"value1\" key2=\"value2\"><bar key3=\"value3\" key4=\"value4\"></bar></foo>"},
+			bar(
+				BuildAttr("key3", "value3"),
+				BuildAttr("key4", "value4"),
+			)), Exp: "<foo key1=\"value1\" key2=\"value2\"><bar key3=\"value3\" key4=\"value4\"></bar></foo>"},
 		{Name: "Self-closing tag", Tag: single(), Exp: "<single />"},
 		{Name: "Self-closing tag with attrs", Tag: single(BuildAttr("key", "value")), Exp: "<single key=\"value\" />"},
 	}

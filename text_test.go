@@ -11,6 +11,6 @@ func TestTextRendering(t *testing.T) {
 func TestTextRenderingWithinTags(t *testing.T) {
 	T1 := TagBuilder("T1")
 
-	assertEqual(t, T1().X(Text("foo")), "<T1>foo</T1>")
-	assertEqual(t, T1().X(Text("foo\nbar")), "<T1>foo\nbar</T1>")
+	assertEqual(t, T1(Text("foo")), "<T1>foo</T1>")
+	assertEqual(t, T1(Text("foo\nbar")), "<T1>foo\nbar</T1>")
 }

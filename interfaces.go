@@ -8,10 +8,16 @@ type Renderable interface {
 	Render(w io.Writer) error
 }
 
-type Tag interface {
-	Tag() Renderable
+type taggable interface {
+	Renderable
+	tag()
 }
 
-type Attr interface {
-	Attr() Renderable
+type attrable interface {
+	Renderable
+	attr()
+}
+
+type Node interface {
+	Node() Renderable
 }

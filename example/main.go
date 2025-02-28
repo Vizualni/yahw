@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"net/http"
 
 	. "github.com/vizualni/yahw"
@@ -12,53 +11,50 @@ type MyCustomButton struct {
 	BackgroundColor string
 }
 
-func (m MyCustomButton) Tag() Renderable { return m }
-
-func (m MyCustomButton) Render(w io.Writer) error {
+func (m MyCustomButton) Node() Renderable {
 	return Button(
 		BuildAttr("style", "background-color: "+m.BackgroundColor),
-	).X(
 		Text(m.Text),
-	).Render(w)
+	)
 }
 
-func MyCustomInput(name, placeholder string) Tag {
+func MyCustomInput(name, placeholder string) Node {
 	return Input(
 		BuildAttr("name", name),
 		BuildAttr("placeholder", placeholder),
 	)
 }
 
-func MyCommonAttributes(link string) Attr {
+func MyCommonAttributes(link string) Node {
 	return AttrSlice{BuildAttr("id", "my-id"), Classes("my-1 my-2 my-1"), BuildAttr("href", link)}
 }
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		root := NewHTML5Doctype().X(
-			HTML().X(
-				Head().X(
-					Title().X(Text("My Custom Button Example")),
-					Style().X(Text("button { padding: 10px; border: none; }")),
-				),
-				Body().X(
-					MyCustomButton{
-						Text:            "Click me!",
-						BackgroundColor: "red",
-					},
-					Br(),
-					MyCustomButton{
-						Text:            "No, click me!",
-						BackgroundColor: "green",
-					},
-					Br(),
-					MyCustomInput("name", "Enter your name"),
-					Br(),
-					MyCustomInput("email", "Enter your email"),
-					Br(),
-					A(MyCommonAttributes("https://example1.com")).X(Text("Click me!")),
-					Br(),
-					A(MyCommonAttributes("https://example2.com")).X(Text("No, click me!")),
+		root := NewHTML5Doctype()
+		HTML(
+			Head(
+				Title((Text("My Custom Button Example")),
+					Style((Text("button { padding: 10px; border: none; }"))),
+					Body(
+						MyCustomButton{
+							Text:            "Click me!",
+							BackgroundColor: "red",
+						},
+						Br(),
+						MyCustomButton{
+							Text:            "No, click me!",
+							BackgroundColor: "green",
+						},
+						Br(),
+						MyCustomInput("name", "Enter your name"),
+						Br(),
+						MyCustomInput("email", "Enter your email"),
+						Br(),
+						A(MyCommonAttributes("https://example1.com"), Text("Click me!")),
+						Br(),
+						A(MyCommonAttributes("https://example2.com"), Text("No, click me!")),
+					),
 				),
 			),
 		)
