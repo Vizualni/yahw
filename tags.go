@@ -27,17 +27,17 @@ func NewTag(tagName string) CommonTag {
 	}
 }
 
-func unwrap(n Node) Renderable {
-	r := n.Node()
-	for i := 0; i < 100; i++ {
-		switch t := r.(type) {
-		case Renderable:
-			r = t
+func unwrapNodes(nodes []Node) []Node {
+	nn := []Node{}
+	for _, n := range nodes {
+		switch t := n.(type) {
+		case Nodes:
+			nn = append(nn, unwrapNodes(t)...)
 		default:
-			return r
+			nn = append(nn, n)
 		}
 	}
-	panic("too many unwraps")
+	return nn
 }
 
 func TagBuilder(tagName string) func(...Node) CommonTag {
@@ -50,7 +50,8 @@ func TagBuilder(tagName string) func(...Node) CommonTag {
 			tagName: tagName,
 		}
 
-		for _, n := range nodes {
+		unwrapped := unwrapNodes(nodes)
+		for _, n := range unwrapped {
 			switch t := n.(type) {
 			case attrable:
 				ct.attrs = append(ct.attrs, t)
@@ -167,6 +168,10 @@ func (t SelfClosingTag) Render(w io.Writer) error {
 	return nil
 }
 
+type Nodes []Node
+
+func (n Nodes) Node() Renderable { panic("Nodes is not a node") }
+
 type CommonTag struct {
 	tagName string
 	attrs   []attrable
@@ -260,15 +265,6 @@ func (t HTML5Doctype) Render(w io.Writer) error {
 		return err
 	}
 	return t.children.Render(w)
-}
-
-func (t HTML5Doctype) clone() HTML5Doctype {
-	children := make([]taggable, len(t.children))
-	copy(children, t.children)
-
-	return HTML5Doctype{
-		children: children,
-	}
 }
 
 type TagSlice []taggable
