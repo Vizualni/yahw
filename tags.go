@@ -282,6 +282,7 @@ func (t TagSlice) Render(w io.Writer) error {
 	}
 	return nil
 }
+func (t TagSlice) Node() Renderable { return t }
 
 // All known HTML5 tags
 
