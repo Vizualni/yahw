@@ -1,6 +1,9 @@
 package yahw
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 type Raw string
 
@@ -14,4 +17,8 @@ func (r Raw) Node() Renderable { return r }
 func (r Raw) Render(w io.Writer) error {
 	_, err := w.Write([]byte(r))
 	return err
+}
+
+func RawFormat(format string, args ...any) Raw {
+	return Raw(fmt.Sprintf(format, args...))
 }
