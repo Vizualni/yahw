@@ -52,6 +52,10 @@ func TagBuilder(tagName string) func(...Node) CommonTag {
 
 		unwrapped := unwrapNodes(nodes)
 		for _, n := range unwrapped {
+			if n == nil {
+				continue
+			}
+
 			switch t := n.(type) {
 			case attrable:
 				ct.attrs = append(ct.attrs, t)
