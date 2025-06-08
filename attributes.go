@@ -60,6 +60,11 @@ func (a Attribute) Node() Renderable { return a }
 func (a Attribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	escapedValue := html.EscapeString(a.value)
+
+	if len(escapedKey) == 0 {
+		return nil // No attribute to render
+	}
+
 	_, err := w.Write([]byte(escapedKey + `="` + escapedValue + `"`))
 	if err != nil {
 		return err
@@ -76,6 +81,11 @@ func (a NoValAttribute) Node() Renderable { return a }
 
 func (a NoValAttribute) Render(w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
+
+	if len(escapedKey) == 0 {
+		return nil // No attribute to render
+	}
+
 	_, err := w.Write([]byte(escapedKey))
 	if err != nil {
 		return err

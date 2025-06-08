@@ -86,25 +86,6 @@ func SelfClosingTagBuilder(tagName string) func(...attrable) SelfClosingTag {
 	}
 }
 
-type Slice []Node
-
-func (s Slice) Render(w io.Writer) error {
-	for _, node := range s {
-		if node == nil {
-			continue
-		}
-		err := node.Node().Render(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s Slice) Node() Renderable {
-	return s
-}
-
 type SelfClosingTag struct {
 	tagName string
 	attrs   []attrable
