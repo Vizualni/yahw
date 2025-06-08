@@ -10,8 +10,10 @@ type Raw string
 var (
 	_ Node       = Raw("")
 	_ Renderable = Raw("")
+	_ taggable   = Raw("")
 )
 
+func (r Raw) tag()             {}
 func (r Raw) Node() Renderable { return r }
 
 func (r Raw) Render(w io.Writer) error {
