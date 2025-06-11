@@ -29,9 +29,15 @@ func (t IfElseTag) Render(w io.Writer) error {
 		if t.then == nil {
 			return nil
 		}
+		if t.then.Node() == nil {
+			return nil
+		}
 		return t.then.Node().Render(w)
 	}
 	if t.els == nil {
+		return nil
+	}
+	if t.els.Node() == nil {
 		return nil
 	}
 	return t.els.Node().Render(w)
