@@ -8,12 +8,19 @@ type IfElseTag struct {
 	els  taggable
 }
 
+var _ Node = IfElseTag{}
+
 func If(cond bool, then taggable) IfElseTag {
 	return IfElseTag{cond: cond, then: then}
 }
 
 func (ie IfElseTag) Else(els taggable) IfElseTag {
 	ie.els = els
+	return ie
+}
+
+// Node implements Node.
+func (ie IfElseTag) Node() Renderable {
 	return ie
 }
 
@@ -56,4 +63,8 @@ func (t IfElseAttr) Render(w io.Writer) error {
 		return nil
 	}
 	return t.els.Render(w)
+}
+
+func (t IfElseAttr) Node() Renderable {
+	return t
 }
