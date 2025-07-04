@@ -1,11 +1,12 @@
 package yahw
 
 import (
+	"context"
 	"io"
 )
 
 type Renderable interface {
-	Render(w io.Writer) error
+	Render(ctx context.Context, w io.Writer) error
 }
 
 type taggable interface {
@@ -19,5 +20,5 @@ type attrable interface {
 }
 
 type Node interface {
-	Node() Renderable
+	Node(ctx context.Context) Renderable
 }

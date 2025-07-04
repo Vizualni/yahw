@@ -1,6 +1,8 @@
 package yahw
 
 import (
+	"context"
+	"fmt"
 	"io"
 )
 
@@ -27,14 +29,17 @@ func NewTag(tagName string) CommonTag {
 	}
 }
 
-func unwrapNodes(nodes []Node) []Node {
-	nn := []Node{}
+func unwrapNodes(ctx context.Context, nodes []Node) []Renderable {
+	nn := []Renderable{}
 	for _, n := range nodes {
+		if n == nil {
+			continue
+		}
 		switch t := n.(type) {
 		case Nodes:
-			nn = append(nn, unwrapNodes(t)...)
+			nn = append(nn, unwrapNodes(ctx, t)...)
 		default:
-			nn = append(nn, n)
+			nn = append(nn, n.Node(ctx))
 		}
 	}
 	return nn
@@ -47,31 +52,8 @@ func TagBuilder(tagName string) func(...Node) CommonTag {
 
 	return func(nodes ...Node) CommonTag {
 		ct := CommonTag{
-			tagName: tagName,
-		}
-
-		unwrapped := unwrapNodes(nodes)
-		for _, n := range unwrapped {
-			if n == nil {
-				continue
-			}
-
-			switch t := n.(type) {
-			case attrable:
-				ct.attrs = append(ct.attrs, t)
-			case taggable:
-				ct.tags = append(ct.tags, t)
-			default:
-				r := n.Node()
-				switch t := r.(type) {
-				case attrable:
-					ct.attrs = append(ct.attrs, t)
-				case taggable:
-					ct.tags = append(ct.tags, t)
-				default:
-					panic("invalid node type")
-				}
-			}
+			tagName:  tagName,
+			children: nodes,
 		}
 
 		return ct
@@ -95,8 +77,8 @@ type SelfClosingTag struct {
 	attrs   []attrable
 }
 
-func (t SelfClosingTag) tag()             {}
-func (t SelfClosingTag) Node() Renderable { return t }
+func (t SelfClosingTag) tag()                                {}
+func (t SelfClosingTag) Node(ctx context.Context) Renderable { return t }
 
 func mergeClasses(clss AttrSlice) Classes {
 	merged := Classes("")
@@ -116,7 +98,7 @@ func mergeClasses(clss AttrSlice) Classes {
 	return merged
 }
 
-func (t SelfClosingTag) Render(w io.Writer) error {
+func (t SelfClosingTag) Render(ctx context.Context, w io.Writer) error {
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
 		return err
@@ -154,7 +136,7 @@ func (t SelfClosingTag) Render(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err = attr.Render(w)
+		err = attr.Render(ctx, w)
 		if err != nil {
 			return err
 		}
@@ -174,30 +156,47 @@ func (t SelfClosingTag) Render(w io.Writer) error {
 
 type Nodes []Node
 
-func (n Nodes) Node() Renderable { panic("Nodes is not a node") }
+func (n Nodes) Node(ctx context.Context) Renderable { panic("Nodes is not a node") }
 
 type CommonTag struct {
 	tagName string
-	attrs   []attrable
-	tags    []taggable
+
+	children []Node
 }
 
-func (t CommonTag) tag()             {}
-func (t CommonTag) Node() Renderable { return t }
+func (t CommonTag) tag()                                {}
+func (t CommonTag) Node(ctx context.Context) Renderable { return t }
 
-func (t CommonTag) Render(w io.Writer) error {
+func (t CommonTag) Render(ctx context.Context, w io.Writer) error {
+	unwrapped := unwrapNodes(ctx, t.children)
+	attrs := AttrSlice{}
+	tags := TagSlice{}
+	for _, n := range unwrapped {
+		if n == nil {
+			continue
+		}
+
+		switch child := n.(type) {
+		case attrable:
+			attrs = append(attrs, child)
+		case taggable:
+			tags = append(tags, child)
+		default:
+			panic(fmt.Sprintf("Invalid node type %T for tag %s", n, t.tagName))
+		}
+	}
 	_, err := w.Write([]byte("<" + t.tagName))
 	if err != nil {
 		return err
 	}
 
-	if len(t.attrs) > 0 {
+	if len(attrs) > 0 {
 		w.Write([]byte(" "))
 	}
 
 	newAttrs := AttrSlice{}
 	toMerge := map[string]AttrSlice{}
-	for _, attr := range t.attrs {
+	for _, attr := range attrs {
 		switch t := attr.(type) {
 		case Classes, ClassesMap:
 			toMerge["class"] = append(toMerge["class"], t)
@@ -223,12 +222,12 @@ func (t CommonTag) Render(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err = attr.Render(w)
+		err = attr.Render(ctx, w)
 		if err != nil {
 			return err
 		}
 
-		if idx < len(t.attrs)-1 {
+		if idx < len(attrs)-1 {
 			w.Write([]byte(" "))
 		}
 	}
@@ -238,11 +237,11 @@ func (t CommonTag) Render(w io.Writer) error {
 		return err
 	}
 
-	for _, child := range t.tags {
+	for _, child := range tags {
 		if child == nil {
 			continue
 		}
-		err = child.Render(w)
+		err = child.Render(ctx, w)
 		if err != nil {
 			return err
 		}
@@ -260,33 +259,33 @@ type HTML5Doctype struct {
 	children TagSlice
 }
 
-func (t HTML5Doctype) tag()             {}
-func (t HTML5Doctype) Node() Renderable { return t }
+func (t HTML5Doctype) tag()                                {}
+func (t HTML5Doctype) Node(ctx context.Context) Renderable { return t }
 
-func (t HTML5Doctype) Render(w io.Writer) error {
+func (t HTML5Doctype) Render(ctx context.Context, w io.Writer) error {
 	_, err := w.Write([]byte("<!DOCTYPE html>"))
 	if err != nil {
 		return err
 	}
-	return t.children.Render(w)
+	return t.children.Render(ctx, w)
 }
 
 type TagSlice []taggable
 
 func (t TagSlice) tag() {}
-func (t TagSlice) Render(w io.Writer) error {
+func (t TagSlice) Render(ctx context.Context, w io.Writer) error {
 	for _, tag := range t {
 		if tag == nil {
 			continue
 		}
-		err := tag.Render(w)
+		err := tag.Render(ctx, w)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (t TagSlice) Node() Renderable { return t }
+func (t TagSlice) Node(ctx context.Context) Renderable { return t }
 
 // All known HTML5 tags
 

@@ -1,44 +1,41 @@
 package yahw
 
-import "io"
+import (
+	"context"
+)
 
-type IfElseTag struct {
+type IfElse struct {
 	cond bool
 	then Node
 	els  Node
 }
 
-var _ Node = IfElseTag{}
+var _ Node = IfElse{}
 
-func If(cond bool, then Node) IfElseTag {
-	return IfElseTag{cond: cond, then: then}
+func If(cond bool, then Node) IfElse {
+	return IfElse{cond: cond, then: then}
 }
 
-func (ie IfElseTag) Else(els Node) IfElseTag {
+func (ie IfElse) Else(els Node) IfElse {
 	ie.els = els
 	return ie
 }
 
 // Node implements Node.
-func (ie IfElseTag) Node() Renderable {
-	return ie
+func (ie IfElse) Node(ctx context.Context) Renderable {
+	eval := ie.evaluate(ctx)
+	if eval == nil {
+		return nil
+	}
+	return eval
 }
 
-func (t IfElseTag) Render(w io.Writer) error {
+func (t IfElse) evaluate(ctx context.Context) Renderable {
 	if t.cond {
-		if t.then == nil {
-			return nil
-		}
-		if t.then.Node() == nil {
-			return nil
-		}
-		return t.then.Node().Render(w)
+		return t.then.Node(ctx)
 	}
-	if t.els == nil {
-		return nil
+	if t.els != nil {
+		return t.els.Node(ctx)
 	}
-	if t.els.Node() == nil {
-		return nil
-	}
-	return t.els.Node().Render(w)
+	return nil
 }

@@ -1,6 +1,7 @@
 package yahw
 
 import (
+	"context"
 	"html"
 	"io"
 	"maps"
@@ -54,10 +55,10 @@ type Attribute struct {
 	value string
 }
 
-func (a Attribute) attr()            {}
-func (a Attribute) Node() Renderable { return a }
+func (a Attribute) attr()                               {}
+func (a Attribute) Node(ctx context.Context) Renderable { return a }
 
-func (a Attribute) Render(w io.Writer) error {
+func (a Attribute) Render(ctx context.Context, w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 	escapedValue := html.EscapeString(a.value)
 
@@ -76,10 +77,10 @@ type NoValAttribute struct {
 	key string
 }
 
-func (a NoValAttribute) attr()            {}
-func (a NoValAttribute) Node() Renderable { return a }
+func (a NoValAttribute) attr()                               {}
+func (a NoValAttribute) Node(ctx context.Context) Renderable { return a }
 
-func (a NoValAttribute) Render(w io.Writer) error {
+func (a NoValAttribute) Render(ctx context.Context, w io.Writer) error {
 	escapedKey := html.EscapeString(a.key)
 
 	if len(escapedKey) == 0 {
@@ -95,10 +96,10 @@ func (a NoValAttribute) Render(w io.Writer) error {
 
 type AttrSlice []attrable
 
-func (a AttrSlice) attr()            {}
-func (a AttrSlice) Node() Renderable { return a }
+func (a AttrSlice) attr()                               {}
+func (a AttrSlice) Node(ctx context.Context) Renderable { return a }
 
-func (a AttrSlice) Render(w io.Writer) error {
+func (a AttrSlice) Render(ctx context.Context, w io.Writer) error {
 	for i, attr := range a {
 		if i > 0 {
 			_, err := w.Write([]byte(" "))
@@ -109,7 +110,7 @@ func (a AttrSlice) Render(w io.Writer) error {
 		if attr == nil {
 			continue
 		}
-		err := attr.Render(w)
+		err := attr.Render(ctx, w)
 		if err != nil {
 			return err
 		}
@@ -154,10 +155,10 @@ func extractClasses(cls string) []string {
 
 type Classes string
 
-func (c Classes) attr()            {}
-func (c Classes) Node() Renderable { return c }
+func (c Classes) attr()                               {}
+func (c Classes) Node(ctx context.Context) Renderable { return c }
 
-func (c Classes) Render(w io.Writer) error {
+func (c Classes) Render(ctx context.Context, w io.Writer) error {
 	res := extractClasses(string(c))
 	_, err := w.Write([]byte(`class="` + strings.Join(res, " ") + `"`))
 	if err != nil {
@@ -189,8 +190,8 @@ func (c Classes) MergeMap(m ClassesMap) Classes {
 
 type ClassesMap map[string]bool
 
-func (c ClassesMap) attr()            {}
-func (c ClassesMap) Node() Renderable { return c }
+func (c ClassesMap) attr()                               {}
+func (c ClassesMap) Node(ctx context.Context) Renderable { return c }
 
 func (c ClassesMap) extract() string {
 	var sb strings.Builder
@@ -210,7 +211,7 @@ func (c ClassesMap) extract() string {
 	return sb.String()
 }
 
-func (c ClassesMap) Render(w io.Writer) error {
+func (c ClassesMap) Render(ctx context.Context, w io.Writer) error {
 	s := c.extract()
 	_, err := w.Write([]byte(`class="` + s + `"`))
 	if err != nil {

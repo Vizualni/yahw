@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	. "github.com/vizualni/yahw"
@@ -11,7 +12,7 @@ type MyCustomButton struct {
 	BackgroundColor string
 }
 
-func (m MyCustomButton) Node() Renderable {
+func (m MyCustomButton) Node(ctx context.Context) Renderable {
 	return Button(
 		BuildAttr("style", "background-color: "+m.BackgroundColor),
 		Text(m.Text),
